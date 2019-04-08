@@ -213,6 +213,7 @@ class TiledGeometryLayer extends GeometryLayer {
             return undefined;
         }
 
+        // Added code to update nodes uniform to specific nodes
         if (node.layer.name === 'water') {
             node.material.uniforms.zDisplacement.value = node.layer.zDisplacement;
         }
