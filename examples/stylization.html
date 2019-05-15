@@ -238,9 +238,10 @@
             #include <logdepthbuf_fragment>
             
                 vec2 normUV = texture_scale * vec2(vUv.x * 100000., vUv.y);
+                normUV = vec2(mod(normUV.x, 1.), mod(normUV.y*1.5, 1.));  
                 if (mode == MODE_TEXTURE) {
-                gl_FragColor = texture2D(texture_walls, normUV + vec2(fract(time),0.));
-                if(dist < 200.) gl_FragColor = texture2D(texture_walls, normUV + vec2(0., fract(time)));
+                    gl_FragColor = texture2D(texture_walls, normUV); // + vec2(fract(time),0.)); // gl_FragCoord.xy / vec2(1920.,1080.)
+                  //  if(dist < 200.) gl_FragColor = texture2D(texture_walls, normUV + vec2(0., fract(time)));
                 } else if (mode == MODE_UV) {
                     float uvu = fract(normUV.x + time * 5.);
                     vec3 col = vec3(0.745, 0.215, 0.698);
@@ -317,8 +318,8 @@
 
             ///// Material creation characterized by its uniforms /////
 
-            const texture_walls =  new THREE.Texture();//TextureLoader().load("textures/texture-resembling-illuminated-windows-in-a-building-at-night_u-l-q1036pt0.jpg");
-            const texture_roof = new THREE.TextureLoader().load("https://raw.githubusercontent.com/iTowns/itowns.github.io/master/images/itowns_logo_300x134.png");
+            let texture_walls =  new THREE.Texture();//TextureLoader().load("textures/texture-resembling-illuminated-windows-in-a-building-at-night_u-l-q1036pt0.jpg");
+            let texture_roof = new THREE.TextureLoader().load("https://raw.githubusercontent.com/iTowns/itowns.github.io/master/images/itowns_logo_300x134.png");
             texture_walls.wrapS = THREE.RepeatWrapping;  // wrapS enables to repeat the texture horizontally
             texture_walls.wrapT = THREE.RepeatWrapping;  // wrapT enables to repeat the texture vertically
             texture_roof.wrapS = THREE.RepeatWrapping;
@@ -354,9 +355,22 @@
                 return meshMaterial;
             }
 
-            let ShadMatRoof  = createMaterial(vertexShader, fragmentShader_roof, new THREE.Color(0XAF005F));
-            let ShadMatWalls = createMaterial(vertexShader, fragmentShader_walls, new THREE.Color(0x782f56));
+            var loader = new THREE.CubeTextureLoader();
+            loader.setPath( 'https://raw.githubusercontent.com/timoxley/threejs/master/examples/textures/cube/pisa/' );
+
+            var textureCube = loader.load( [
+                'px.png', 'nx.png',
+                'py.png', 'ny.png',
+                'pz.png', 'nz.png'
+            ] );
+            textureCube.mapping = THREE.CubeRefractionMapping;
+
+            var mat = new THREE.MeshBasicMaterial( { color: 0xffffff, envMap: textureCube } );
+
+            let ShadMatRoof  = createMaterial(vertexShader, fragmentShader_roof, new THREE.Color(0XAF005F)); // mat
+            let ShadMatWalls = createMaterial(vertexShader, fragmentShader_walls, new THREE.Color(0x782f56)); // new itowns.THREE.MeshStandardMaterial({color: 0x782f56});// createMaterial(vertexShader, fragmentShader_walls, new THREE.Color(0x782f56));
             let ShadMatEdges = createMaterial(vertexShader, fragmentShader_edges, new THREE.Color(0x4d1a36));
+
 
             
 /*************************************** WATER Part ***********************************************/
@@ -433,9 +447,12 @@
                 // Buildings
                 //var wallColor = ShadMatWalls.uniforms.color.value.getHex();
                 //ShadMatWalls.uniforms.color.value = new THREE.Color(Math.sin(time),Math.cos(time),Math.sin(time));
-                ShadMatWalls.uniforms.time.value = buildingTime;
-                ShadMatRoof.uniforms.time.value = buildingTime;
-                ShadMatEdges.uniforms.time.value = buildingTime;
+                if(ShadMatWalls.uniforms)
+                    ShadMatWalls.uniforms.time.value = buildingTime;
+                if(ShadMatRoof.uniforms)
+                    ShadMatRoof.uniforms.time.value = buildingTime;
+                if(ShadMatEdges.uniforms)
+                    ShadMatEdges.uniforms.time.value = buildingTime;
                 //globeView.notifyChange(true);
                 view.notifyChange(true);
                 requestAnimationFrame(animateThings);

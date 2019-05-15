@@ -600,7 +600,7 @@ function featureToExtrudedPolygon(feature, options) {
     geom.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvsWallsWithDup), 2));
     geom.addAttribute('zbottom', new THREE.BufferAttribute(new Float32Array(altitudeWalls), 1));
     if (batchIdsWalls) { geom.addAttribute('batchId', new THREE.BufferAttribute(new Float32Array(batchIdsWalls), 1)); }
-
+    geom.computeVertexNormals();
     var mat = new THREE.MeshBasicMaterial({ /* map: texture */  color: new THREE.Color(Math.random() * 0xffff00),  wireframe: true });
     const mesh = new THREE.Mesh(geom, mat);
     mesh.minAltitude = vertices.minAltitude;
@@ -613,6 +613,7 @@ function featureToExtrudedPolygon(feature, options) {
     geomRoof.addAttribute('zbottom', new THREE.BufferAttribute(new Float32Array(altitudeRoof), 1));
     if (batchIds) { geomRoof.addAttribute('batchId', new THREE.BufferAttribute(new Float32Array(batchIds), 1)); }
 
+    geomRoof.computeVertexNormals();
     // var textureRoof = new THREE.TextureLoader().load('./textures/slatetile.jpg');
     // var matRoof = new THREE.MeshBasicMaterial({ /* map: textureRoof, */  color: new THREE.Color(Math.random() * 0xffff00), wireframe: true });
     const meshRoof = new THREE.Mesh(geomRoof, shadMat/* matRoof */);
