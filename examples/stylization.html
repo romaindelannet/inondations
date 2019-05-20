@@ -69,12 +69,12 @@
             itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
             itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
 
-            var color = new itowns.THREE.Color();
+            
 
 
 
 /*************************************** Building Part ***********************************************/
-
+            var color = new itowns.THREE.Color();
             function colorBuildings(properties) {
                 if (properties.id.indexOf('bati_remarquable') === 0) {
                     return color.set(0x5555ff);
@@ -307,9 +307,11 @@
             uniform vec3 currentPos;
             uniform float waterHeight;
             varying float dist;
+            varying float vZbottom;
+
             void main(){
             #include <logdepthbuf_fragment>
-            gl_FragColor = vec4(color, opacity);
+                gl_FragColor = vec4(color, opacity);
             }
             `;
 
@@ -369,7 +371,7 @@
 
             let ShadMatRoof  = createMaterial(vertexShader, fragmentShader_roof, new THREE.Color(0XAF005F)); // mat
             let ShadMatWalls = createMaterial(vertexShader, fragmentShader_walls, new THREE.Color(0x782f56)); // new itowns.THREE.MeshStandardMaterial({color: 0x782f56});// createMaterial(vertexShader, fragmentShader_walls, new THREE.Color(0x782f56));
-            let ShadMatEdges = createMaterial(vertexShader, fragmentShader_edges, new THREE.Color(0x4d1a36));
+            let ShadMatEdges = createMaterial(vertexShader, fragmentShader_edges, new THREE.Color(0xffff00));
 
 
             
@@ -428,6 +430,7 @@
                 // We also update the water height value for the building shaders so they can react
                 ShadMatWalls.uniforms.waterHeight.value = displacement;
                 ShadMatRoof.uniforms.waterHeight.value = displacement;
+                ShadMatEdges.uniforms.waterHeight.value = displacement;
 
                 // We tell the view we updated the globeWater
                 view.notifyChange(globeWater);
