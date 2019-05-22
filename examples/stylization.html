@@ -31,7 +31,7 @@
 
             var THREE = itowns.THREE;
             // Define initial camera position
-            var positionOnGlobe = { longitude: 2.24485, latitude: 48.88983, altitude: 1200 };
+            var positionOnGlobe = { longitude: 2.24485, latitude: 48.88983, altitude: 1500 };
             var meshes = [];
             var scaler;
             var waterHeightAtStart = 0.1;
@@ -195,16 +195,30 @@
             varying vec2 vUv;
             uniform float time;
             uniform vec3 currentPos;
+            uniform int movingBuildings;
             varying float dist; 
             varying float vZbottom;
 
             void main(){
             
                 vUv = uv;
-                vec3 newPos = position ; // * (1. + time/10.); // mod(time, 0.001));
-                vec4 posAbs = modelMatrix * vec4(newPos, 1.0);
-                dist = distance(posAbs.xyz, currentPos);
-                if(dist < 200.) posAbs.xyz *= (1. + (200. - dist)/80000000.); // If mouse 3D intersection is close to building we push them up
+                vec3 newPos = position ; 
+                vec3 currentPosInDalle = currentPos - modelMatrix[3].xyz;  // We compute the mouse3D position in the local tile geometry coordinate sys
+                float dist2DLocal = distance(currentPosInDalle.xy , position.xy);  // We compute the distance mouse3D/current vertex in the local tile geometry coordinate sys
+                vec3 newPos2 = vec3(newPos.x, newPos.y, newPos.z);
+                vec4 posAbs = modelMatrix * vec4(newPos2, 1.0);
+                dist = dist2DLocal; //distance(posAbs.xyz, currentPos);
+                float localDist = length(position.xy);
+                float alpha = atan(position.y, position.x);
+                float newX = localDist * cos(alpha + time / 1.);
+                float newY = localDist * sin(alpha + time / 1.);
+                vec3 newLocalPos = vec3(newX, newY, position.z);
+
+                if(dist2DLocal < 250. && movingBuildings == 1){
+                   posAbs = modelMatrix * vec4(newLocalPos, 1.0);
+                }
+
+              //  if(dist < 200.) posAbs.xyz *= (1. + (200. - dist)/80000000.); // If mouse 3D intersection is close to building we push them up
                 // Let s make like the currentPos attracts the buildings
                 // if(dist < 200.) posAbs.xyz = mix(posAbs.xyz, currentPos, 1. - dist/200.);
                 vZbottom = zbottom;
@@ -345,7 +359,8 @@
                     time       : {type: 'f', value: time},                      // time to create animation
                     currentPos:  new THREE.Uniform(currentPos),                 // Current position in the trace
                     darkenBottom: {type: 'i', value: 1},                        // Option to darken the bottom of buildings wall
-                    waterHeight: {type: 'f', value: waterHeightAtStart}, 
+                    waterHeight: {type: 'f', value: waterHeightAtStart},        // Water height connected to the slider
+                    movingBuildings : {type: 'i', value: 1},                    // Option so buildings close to mouse rotate  
                 };
 
                 let meshMaterial = new THREE.ShaderMaterial({
@@ -423,6 +438,12 @@
                         view.notifyChange(globeWater);
                     })
             );
+  
+            menuGlobe.gui.add({ movingBuildings: ShadMatWalls.uniforms.movingBuildings.value == 1 ? true : false }, 'movingBuildings').onChange((function updateBottom(value) {
+                ShadMatWalls.uniforms.movingBuildings.value = value ? 1 : 0;
+                ShadMatRoof.uniforms.movingBuildings.value = value ? 1 : 0;
+                ShadMatEdges.uniforms.movingBuildings.value = value ? 1 : 0;
+             }));
 
             function adjustAltitude(value) {
                 // Here we specify the Z displacement for the water
@@ -443,7 +464,7 @@
                 // get 3D coordinates on mouse click
                 window.addEventListener('mousemove', pickPosition, false);
                 function pickPosition(event) {
-                    var vec3 = pickingBuildings(event);
+                    var vec3 = new THREE.Vector3();//pickingBuildings(event);  // Here you can call pickingBuildings if you want!
                     if(vec3.z == 0){
                         geoposition = view.controls.pickGeoPosition(new itowns.THREE.Vector2(event.pageX,event.pageY));
                         let converted = geoposition.as('EPSG:4978'); 
