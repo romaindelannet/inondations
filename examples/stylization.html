@@ -69,7 +69,7 @@
             itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
             itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
 
-            
+    
 
 
 
@@ -158,8 +158,9 @@
                 // eslint-disable-next-line no-console
                 console.info('Globe initialized');
                 view.controls.setTilt(45);
-                // console.log(view);
+                addPickingCapability();
             });
+
             var d = new debug.Debug(view, menuGlobe.gui);
             debug.createTileDebugUI(menuGlobe.gui, view, view.tileLayer, d);
 
@@ -203,11 +204,11 @@
                 vec3 newPos = position ; // * (1. + time/10.); // mod(time, 0.001));
                 vec4 posAbs = modelMatrix * vec4(newPos, 1.0);
                 dist = distance(posAbs.xyz, currentPos);
-                if(dist < 200.) posAbs.xyz *= (1. + (200. - dist)/80000000.);  // newPos += dist / 10.;
+                if(dist < 200.) posAbs.xyz *= (1. + (200. - dist)/80000000.); // If mouse 3D intersection is close to building we push them up
                 // Let s make like the currentPos attracts the buildings
                 // if(dist < 200.) posAbs.xyz = mix(posAbs.xyz, currentPos, 1. - dist/200.);
                 vZbottom = zbottom;
-                gl_Position = projectionMatrix *  modelViewMatrix * vec4(position, 1.0); // modelViewMatrix * vec4(newPos, 1.0);
+                gl_Position = projectionMatrix *  viewMatrix * posAbs; //vec4(newPos, 1.0); // modelViewMatrix * vec4(newPos, 1.0);
                 #include <logdepthbuf_vertex>
             }
             `;
@@ -252,7 +253,7 @@
                 gl_FragColor = vec4(color, opacity);
                 }
                 //if(dist < 200.) gl_FragColor = vec4(dist/200.,0.,0.,1.);
-                if(dist < 200.) gl_FragColor = mix(gl_FragColor, vec4(1.,0.,0.,1.), 0.2);
+                if(dist < 200.) gl_FragColor = mix(gl_FragColor, vec4(0.,1.,0.,1.), 1. - dist / 200.); // We mix the current color with a green depending on the distance to the mouse
                 if(darkenBottom == 1){
                     float darkenCoef = min(vUv.y, 50.)  / 50.; 
                     gl_FragColor.rgb *= min(0.2 + darkenCoef, 1.);
@@ -286,15 +287,16 @@
             vec2 normUV = texture_scale * vUv * 200000.;
             normUV.y *= 2.;
             if(mode == MODE_TEXTURE){
-                    gl_FragColor = texture2D(texture_roof, normUV);
-                } else if (mode == MODE_UV) {
-                    gl_FragColor = vec4(fract(normUV),0.,1.);
-                } else {
-                    gl_FragColor = vec4(color, opacity);
-                }
-                gl_FragColor.r *= vZbottom / 50.;
-
-                if( vZbottom < waterHeight) gl_FragColor.r *= abs(sin(time  + normUV.x ));
+                gl_FragColor = texture2D(texture_roof, normUV);
+            } else if (mode == MODE_UV) {
+                gl_FragColor = vec4(fract(normUV),0.,1.);
+            } else {
+                 gl_FragColor = vec4(color, opacity);
+            }
+                
+            gl_FragColor.r *= vZbottom / 50.;
+            if(dist < 200.) gl_FragColor = mix(gl_FragColor, vec4(0.,1.,0.,1.), 1. - dist / 200.); // We mix the current color with a green depending on the distance to the mouse
+            if( vZbottom < waterHeight) gl_FragColor.r *= abs(sin(time  + normUV.x ));
             }
             `;
 
@@ -436,7 +438,36 @@
                 view.notifyChange(globeWater);
             }
 
-
+            // Add 3D picking on both Terrain and Buildings
+            function addPickingCapability(){
+                // get 3D coordinates on mouse click
+                window.addEventListener('mousemove', pickPosition, false);
+                function pickPosition(event) {
+                    var vec3 = pickingBuildings(event);
+                    if(vec3.z == 0){
+                        geoposition = view.controls.pickGeoPosition(new itowns.THREE.Vector2(event.pageX,event.pageY));
+                        let converted = geoposition.as('EPSG:4978'); 
+                        coordinates = converted._values;
+                        vec3 = new THREE.Vector3(coordinates[0], coordinates[1], coordinates[2]);
+                    }
+                    ShadMatWalls.uniforms.currentPos.value = vec3;
+                    ShadMatRoof.uniforms.currentPos.value = vec3;
+                    ShadMatEdges.uniforms.currentPos.value = vec3;
+                }
+            }
+            
+            // Picking on buildings
+            function pickingBuildings(event) {
+                var p3D = new itowns.THREE.Vector3();
+                if(view.controls.isPaused()) {
+                    var intersects = view.pickObjectsAt(event, 3, 'WFS Building');
+                    if (intersects.length) {
+                        p3D = intersects[0].point;
+                    }
+                }
+                return p3D;
+            }
+            
 // ************************ Animation part ********************************************/
             var buildingTime = 0;
             animateThings();
