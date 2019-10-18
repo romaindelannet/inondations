@@ -188,36 +188,73 @@
 
             ////////////////////////////////////////////////////////////////////////////////////// VERTEX SHADERS ////////////////////////////////////////////////////////////////////////////////////
 
+            
             const vertexShader = `
             #include <logdepthbuf_pars_vertex>
             attribute float zbottom;
             uniform float waterHeight;
             varying vec2 vUv;
             uniform float time;
+            uniform vec2 jellyVector;
             uniform vec3 currentPos;
             uniform int movingBuildings;
             varying float dist; 
             varying float vZbottom;
 
+
+            mat4 rotationMatrix(vec3 axis, float angle)
+            {
+                axis = normalize(axis);
+                float s = sin(angle);
+                float c = cos(angle);
+                float oc = 1.0 - c;
+                
+                return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+                            oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+                            oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+                            0.0,                                0.0,                                0.0,                                1.0);
+            }
+
+
+
             void main(){
             
+                int jelly = 0;
                 vUv = uv;
-                vec3 newPos = position ; 
+                vec3 newPos = position; 
+                vec3 posJelly = vec3(position.x , position.y, position.z);
+                if(jelly == 1) posJelly.xy += jellyVector / 10. * sin(time * 10.) * (position.z - 30.) / 100.;
                 vec3 currentPosInDalle = currentPos - modelMatrix[3].xyz;  // We compute the mouse3D position in the local tile geometry coordinate sys
                 float dist2DLocal = distance(currentPosInDalle.xy , position.xy);  // We compute the distance mouse3D/current vertex in the local tile geometry coordinate sys
                 vec3 newPos2 = vec3(newPos.x, newPos.y, newPos.z);
-                vec4 posAbs = modelMatrix * vec4(newPos2, 1.0);
+                if(dist2DLocal < 150. ) {
+                    posJelly += normal * dist2DLocal / 2. * abs(sin(time)) * sin(mod(vUv.y,4.));
+                    posJelly.z += 60.;
+                }
+                vec4 posAbs = modelMatrix * vec4(posJelly, 1.0); // vec4(newPos2, 1.0);
                 dist = dist2DLocal; //distance(posAbs.xyz, currentPos);
                 float localDist = length(position.xy);
                 float alpha = atan(position.y, position.x);
-                float newX = localDist * cos(alpha + time / 1.);
-                float newY = localDist * sin(alpha + time / 1.);
+                float newX = localDist * cos(alpha + time / 1.) ;
+                float newY = localDist * sin(alpha + time / 1.) ;
                 vec3 newLocalPos = vec3(newX, newY, position.z);
 
-                if(dist2DLocal < 250. && movingBuildings == 1){
-                   posAbs = modelMatrix * vec4(newLocalPos, 1.0);
-                }
+                mat4 rotAroundAxis = rotationMatrix(currentPos, time/12.);
+                vec4 posAbsRot =  /*rotAroundAxis * */ posAbs;
 
+                // Rotation around axis
+                if(dist2DLocal < 150. && movingBuildings == 1){
+                   posAbs = posAbsRot;// modelMatrix * vec4(newLocalPos, 1.0);
+
+                }
+/*
+                // Explosion fragments
+                if(dist2DLocal < 150. && jelly == 1){
+                  
+                    //   posAbs = posAbsRot;// modelMatrix * vec4(newLocalPos, 1.0);
+                }
+*/
+             
               //  if(dist < 200.) posAbs.xyz *= (1. + (200. - dist)/80000000.); // If mouse 3D intersection is close to building we push them up
                 // Let s make like the currentPos attracts the buildings
                 // if(dist < 200.) posAbs.xyz = mix(posAbs.xyz, currentPos, 1. - dist/200.);
@@ -357,6 +394,7 @@
                     opacity: {type: 'f', value: 1.0},                           // Default opacity parameter
                     texture_scale : {type: 'f', value: 0.01},                   // Scale factor on texture (float between 0.0 and 1.0)
                     time       : {type: 'f', value: time},                      // time to create animation
+                    jellyVector  : {type: 'v2', value: jellyVector},            // directional vector and strengh for jelly effect
                     currentPos:  new THREE.Uniform(currentPos),                 // Current position in the trace
                     darkenBottom: {type: 'i', value: 1},                        // Option to darken the bottom of buildings wall
                     waterHeight: {type: 'f', value: waterHeightAtStart},        // Water height connected to the slider
@@ -488,9 +526,26 @@
                 }
                 return p3D;
             }
+
+            var mouseDownCoord = new THREE.Vector2();
+            var mouseUpCoord = new THREE.Vector2();
+            window.addEventListener('mousedown', checkMouseDown, false);
+            window.addEventListener('mouseup', checkMouseUp, false);
+
+            function checkMouseDown(evt){
+                mouseDownCoord = new THREE.Vector2(event.pageX,event.pageY);
+            }
+            function checkMouseUp(evt){
+                mouseUpCoord = new THREE.Vector2(event.pageX,event.pageY);
+                jellyVector = mouseUpCoord.sub(mouseDownCoord);//mouseDownCoord.distanceTo(mouseUpCoord);
+            //    console.log(mouseDownCoord, mouseUpCoord, jellyVector);
+            }
+
             
 // ************************ Animation part ********************************************/
             var buildingTime = 0;
+            var jellyTime = 0;
+            var jellyVector = new THREE.Vector2();
             animateThings();
 
             // Animate some shaders uniform (roads, buildings...)
@@ -499,16 +554,24 @@
                 time += 0.04;
                 buildingTime = time / 4;
 
+                if(jellyVector.length() > 0 ) jellyVector.multiplyScalar(0.98);
+                //console.log(jellyVector.length() , jellyVector);
+
                 // Buildings
                 //var wallColor = ShadMatWalls.uniforms.color.value.getHex();
                 //ShadMatWalls.uniforms.color.value = new THREE.Color(Math.sin(time),Math.cos(time),Math.sin(time));
-                if(ShadMatWalls.uniforms)
+                if(ShadMatWalls.uniforms){
                     ShadMatWalls.uniforms.time.value = buildingTime;
-                if(ShadMatRoof.uniforms)
+                    ShadMatWalls.uniforms.jellyVector.value = jellyVector;
+                }
+                if(ShadMatRoof.uniforms){
                     ShadMatRoof.uniforms.time.value = buildingTime;
-                if(ShadMatEdges.uniforms)
+                    ShadMatRoof.uniforms.jellyVector.value = jellyVector;
+                }
+                if(ShadMatEdges.uniforms){
                     ShadMatEdges.uniforms.time.value = buildingTime;
-                //globeView.notifyChange(true);
+                    ShadMatEdges.uniforms.jellyVector.value = jellyVector;
+                }    
                 view.notifyChange(true);
                 requestAnimationFrame(animateThings);
             };
