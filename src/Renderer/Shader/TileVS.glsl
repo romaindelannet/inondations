@@ -12,6 +12,10 @@ attribute vec3      normal;
 uniform mat4 modelMatrix;
 uniform bool lightingEnabled;
 
+// itownsresearch mod
+uniform float zDisplacement;
+// itownsresearch mod over
+
 #if MODE == MODE_FINAL
 #include <fog_pars_vertex>
 varying vec3        vUv;
@@ -22,6 +26,11 @@ void main() {
 
         #include <begin_vertex>
         #include <itowns/elevation_vertex>
+
+        // itownsresearch mod
+        transformed += zDisplacement * normal;
+        // itownsresearch mod over
+
         #include <project_vertex>
         #include <logdepthbuf_vertex>
 #if MODE == MODE_FINAL

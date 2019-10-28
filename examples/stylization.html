@@ -436,8 +436,8 @@
 
             // Here we create the Tile geometry for the water using an ellipsoid with specific vertex displacement
             let object3d = new itowns.THREE.Object3D();
-            let segments = 128;  // Hi-res tile subdivision
-            const globeWater =  {};// = itowns.createGlobeLayer('globeWater', { object3d, segments });
+            let segments = 128;  // Hi-res tile subdivision 
+            const globeWater = new itowns.GlobeLayer('globeWater', object3d, {segments:128} ); // id, options.object3d, options// {};  // = itowns.createGlobeLayer('globeWater', { object3d, segments });
             globeWater.zDisplacement = waterHeightAtStart; // We add a new attribute. It needs to be in the update loop of TiledGeometryLayer to access uniforms
             // which are defined in LayeredMaterial and the respected shader (TileVS in this example)
             globeWater.name = "water";
@@ -448,7 +448,7 @@
             // globe2.noTextureColor = new itowns.THREE.Color(0xd0d5d8);
 
             // add globeWater to the view so it gets updated
-        //   itowns.View.prototype.addLayer.call(view, globeWater);
+            itowns.View.prototype.addLayer.call(view, globeWater);
             //globeWater.addLayer(IGN_MNT_HR);
             //itowns.View.prototype.addLayer.call(globeView, IGN_MNT_HR, globeWater);
 

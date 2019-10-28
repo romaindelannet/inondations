@@ -208,6 +208,12 @@ class TiledGeometryLayer extends GeometryLayer {
             return undefined;
         }
 
+        // itownsresearch mod
+        if (node.layer.name === 'water') {
+            node.material.uniforms.zDisplacement.value = node.layer.zDisplacement;
+        }
+        // itownsresearch mod over
+
         // do proper culling
         node.visible = !this.culling(node, context.camera);
 
