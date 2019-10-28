@@ -5,6 +5,7 @@
 	    "networkOptions": { "crossOrigin" : "anonymous" },
         "format": "image/png",
         "url": "http://a.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png",
+        "name": "DARK",
     	"attribution": {
     		"name":"CARTO",
     		"url": "https://carto.com/"

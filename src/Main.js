@@ -24,6 +24,7 @@ export { default as StreetControls } from 'Controls/StreetControls';
 export { default as PlanarControls } from 'Controls/PlanarControls';
 export { CONTROL_EVENTS } from 'Controls/GlobeControls';
 export { default as Feature2Mesh } from 'Converter/Feature2Mesh';
+export { default as Feature2Mesh_R } from 'Converter/Feature2Mesh_R';
 export { default as FeaturesUtils } from 'Utils/FeaturesUtils';
 export { default as DEMUtils } from 'Utils/DEMUtils';
 export { default as CameraUtils } from 'Utils/CameraUtils';
