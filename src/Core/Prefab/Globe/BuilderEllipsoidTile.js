@@ -1,13 +1,10 @@
 import * as THREE from 'three';
 import Coordinates from 'Core/Geographic/Coordinates';
 import OBB from 'Renderer/OBB';
-import Extent from 'Core/Geographic/Extent';
 
 const PI_OV_FOUR = Math.PI / 4;
 const INV_TWO_PI = 1.0 / (Math.PI * 2);
-const axisZ = new THREE.Vector3(0, 0, 1);
 const axisY = new THREE.Vector3(0, 1, 0);
-const quatToAlignLongitude = new THREE.Quaternion();
 const quatToAlignLatitude = new THREE.Quaternion();
 const quatNormalToZ = new THREE.Quaternion();
 
@@ -105,20 +102,15 @@ class BuilderEllipsoidTile {
         // TODO: It should be possible to use equatorial plan symetrie,
         // but we should be reverse UV on tile
         // Common geometry is looking for only on longitude
-        const sizeLongitude = Math.abs(extent.west - extent.east) / 2;
-        const sharableExtent = new Extent(extent.crs, -sizeLongitude, sizeLongitude, extent.south, extent.north);
 
         // compute rotation to transform tile to position it on ellipsoid
         // this transformation take into account the transformation of the parents
-        const rotLon = THREE.Math.degToRad(extent.west - sharableExtent.west);
         const rotLat = THREE.Math.degToRad(90 - extent.center(this.tmp.coords[0]).latitude);
-        quatToAlignLongitude.setFromAxisAngle(axisZ, rotLon);
         quatToAlignLatitude.setFromAxisAngle(axisY, rotLat);
-        quatToAlignLongitude.multiply(quatToAlignLatitude);
 
         return {
-            sharableExtent,
-            quaternion: quatToAlignLongitude.clone(),
+            sharableExtent: extent,
+            quaternion: quatToAlignLatitude.clone(),
             position: this.center(extent),
         };
     }

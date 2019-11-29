@@ -7,8 +7,9 @@ const cacheBuffer = new Map();
 export default function newTileGeometry(builder, params) {
     const { sharableExtent, quaternion, position } = builder.computeSharableExtent(params.extent);
     const south = sharableExtent.south.toFixed(6);
+    const east = sharableExtent.east.toFixed(6);
     const bufferKey = `${builder.projection}_${params.disableSkirt ? 0 : 1}_${params.segment}`;
-    const geometryKey = `${bufferKey}_${params.level}_${south}`;
+    const geometryKey = `${bufferKey}_${params.level}_${south}_${east}`;
     let promiseGeometry = Cache.get(geometryKey);
 
     // build geometry if doesn't exist
@@ -37,8 +38,11 @@ export default function newTileGeometry(builder, params) {
             buffers.uvs[0] = cachedBuffers.uv;
             buffers.position = new THREE.BufferAttribute(buffers.position, 3);
             buffers.normal = new THREE.BufferAttribute(buffers.normal, 3);
-            if (params.builder.uvCount > 1) {
-                buffers.uvs[1] = new THREE.BufferAttribute(buffers.uvs[1], 1);
+            buffers.wgs84 = new THREE.BufferAttribute(buffers.wgs84, 2);
+            buffers.l93 = new THREE.BufferAttribute(buffers.l93, 2);
+
+            for (let i = 1; i < params.builder.uvCount; i++) {
+                buffers.uvs[i] = new THREE.BufferAttribute(buffers.uvs[i], 2);
             }
 
             const geometry = new TileGeometry(params, buffers);
