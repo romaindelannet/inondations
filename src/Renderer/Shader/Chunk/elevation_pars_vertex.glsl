@@ -9,7 +9,7 @@
 
     uniform Layer       elevationLayers[NUM_VS_TEXTURES];
     uniform sampler2D   elevationTextures[NUM_VS_TEXTURES];
-    uniform vec4        elevationOffsetScales[NUM_VS_TEXTURES];
+    uniform vec4        elevationExtents[NUM_VS_TEXTURES];
     uniform int         elevationTextureCount;
 
     highp float decode32(highp vec4 rgba) {
@@ -30,8 +30,10 @@
         return 0.;
     }
 
-    float getElevation(vec2 uv, sampler2D texture, vec4 offsetScale, Layer layer) {
-        uv = uv * offsetScale.zw + offsetScale.xy;
+    float getElevation(vec2 uv, sampler2D texture, vec4 extent, Layer layer) {
+        vec4 uvuv = vec4(uv, extent.zw) - extent.xyxy;
+        uv = uvuv.xy/uvuv.zw;
+        uv.y = 1.-uv.y;
         float d = getElevationMode(uv, texture, layer.mode);
         if (d < layer.zmin || d > layer.zmax) d = 0.;
         return d * layer.scale + layer.bias;

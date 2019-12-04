@@ -6,7 +6,7 @@ import Capabilities from 'Core/System/Capabilities';
 import RenderMode from 'Renderer/RenderMode';
 import MaterialLayer from 'Renderer/MaterialLayer';
 
-const identityOffsetScale = new THREE.Vector4(0.0, 0.0, 1.0, 1.0);
+const fullExtent = new THREE.Vector4(-180, -90, 180, 90);
 
 // from three.js packDepthToRGBA
 const UnpackDownscale = 255 / 256; // 0..1 -> fraction (excluding 1)
@@ -25,6 +25,9 @@ export function unpack1K(color, factor) {
 const maxSamplersColorCount = 15;
 const samplersElevationCount = 1;
 
+const PI_OVER_4 = 0.25 * Math.PI;
+const PI_OVER_360 = Math.PI / 360.0;
+
 export function getMaxColorSamplerUnitsCount() {
     const maxSamplerUnitsCount = Capabilities.getMaxTextureUnitsCount();
     return Math.min(maxSamplerUnitsCount - samplersElevationCount, maxSamplersColorCount);
@@ -34,7 +37,7 @@ function updateLayersUniforms(uniforms, olayers, max) {
     // prepare convenient access to elevation or color uniforms
     const layers = uniforms.layers.value;
     const textures = uniforms.textures.value;
-    const offsetScales = uniforms.offsetScales.value;
+    const extents = uniforms.extents.value;
     const textureCount = uniforms.textureCount;
 
     // flatten the 2d array [i,j] -> layers[_layerIds[i]].textures[j]
@@ -42,9 +45,16 @@ function updateLayersUniforms(uniforms, olayers, max) {
     for (const layer of olayers) {
         layer.textureOffset = count;
         for (let i = 0, il = layer.textures.length; i < il; ++i, ++count) {
-            if (count < max) {
-                offsetScales[count] = layer.offsetScales[i];
-                textures[count] = layer.textures[i];
+            const t = layer.textures[i];
+            if (count < max && t.coords) {
+                const e = t.coords.as('EPSG:4326');
+                if (t.coords.crs == 'WMTS:PM') {
+                    e.south = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * e.south));
+                    e.north = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * e.north));
+                }
+
+                extents[count].set(e.west, e.south, e.east, e.north);
+                textures[count] = t;
                 layers[count] = layer;
             }
         }
@@ -98,6 +108,8 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
     constructor(options = {}, crsCount) {
         super(options);
 
+        crsCount = 3; // WGS84, PM, L93 // TODO !!!
+
         nbSamplers = nbSamplers || [samplersElevationCount, getMaxColorSamplerUnitsCount()];
 
         this.defines.NUM_VS_TEXTURES = nbSamplers[0];
@@ -111,9 +123,9 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
 
         if (__DEBUG__) {
             this.defines.DEBUG = 1;
-            const outlineColors = [new THREE.Vector3(1.0, 0.0, 0.0)];
-            if (crsCount > 1) {
-                outlineColors.push(new THREE.Vector3(1.0, 0.5, 0.0));
+            const outlineColors = [];
+            for (let i = 0; i < this.defines.NUM_CRS; ++i) {
+                outlineColors.push(new THREE.Vector3(1.0, i / (crsCount - 1.0), 0.0));
             }
             setUniformProperty(this, 'showOutline', true);
             setUniformProperty(this, 'outlineWidth', 0.008);
@@ -163,21 +175,30 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
         // elevation layer uniforms, to be updated using updateUniforms()
         this.uniforms.elevationLayers = new THREE.Uniform(new Array(nbSamplers[0]).fill({}));
         this.uniforms.elevationTextures = new THREE.Uniform(new Array(nbSamplers[0]).fill(null));
-        this.uniforms.elevationOffsetScales = new THREE.Uniform(new Array(nbSamplers[0]).fill(identityOffsetScale));
+        this.uniforms.elevationExtents = new THREE.Uniform(new Array(nbSamplers[0]).fill(null));
         this.uniforms.elevationTextureCount = new THREE.Uniform(0);
+
 
         // color layer uniforms, to be updated using updateUniforms()
         this.uniforms.colorLayers = new THREE.Uniform(new Array(nbSamplers[1]).fill({}));
         this.uniforms.colorTextures = new THREE.Uniform(new Array(nbSamplers[1]).fill(null));
-        this.uniforms.colorOffsetScales = new THREE.Uniform(new Array(nbSamplers[1]).fill(identityOffsetScale));
+        this.uniforms.colorExtents = new THREE.Uniform(new Array(nbSamplers[1]).fill(null));
         this.uniforms.colorTextureCount = new THREE.Uniform(0);
+
+
+        for (let i = 0; i < nbSamplers[0]; ++i) {
+            this.uniforms.elevationExtents.value[i] = fullExtent.clone();
+        }
+        for (let i = 0; i < nbSamplers[1]; ++i) {
+            this.uniforms.colorExtents.value[i] = fullExtent.clone();
+        }
     }
 
     getUniformByType(type) {
         return {
             layers: this.uniforms[`${type}Layers`],
             textures: this.uniforms[`${type}Textures`],
-            offsetScales: this.uniforms[`${type}OffsetScales`],
+            extents: this.uniforms[`${type}Extents`],
             textureCount: this.uniforms[`${type}TextureCount`],
         };
     }
@@ -187,11 +208,12 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
         colorlayers.sort((a, b) => this.colorLayerIds.indexOf(a.id) - this.colorLayerIds.indexOf(b.id));
         updateLayersUniforms(this.getUniformByType('color'), colorlayers, this.defines.NUM_FS_TEXTURES);
 
-        if (this.elevationLayerIds.some(id => this.getLayer(id)) ||
-            (this.uniforms.elevationTextureCount.value && !this.elevationLayerIds.length)) {
-            const elevationLayer = this.getElevationLayer() ? [this.getElevationLayer()] : [];
-            updateLayersUniforms(this.getUniformByType('elevation'), elevationLayer, this.defines.NUM_VS_TEXTURES);
-        }
+        // if (this.elevationLayerIds.some(id => this.getLayer(id)) ||
+        //    (this.uniforms.elevationTextureCount.value && !this.elevationLayerIds.length)) {
+        const elevationLayers = this.getElevationLayer() ? [this.getElevationLayer()] : [];
+        updateLayersUniforms(this.getUniformByType('elevation'), elevationLayers, this.defines.NUM_VS_TEXTURES);
+        // console.log(this.uniforms.elevationExtents.value[0]);
+        // }
         this.layersNeedUpdate = false;
     }
 

@@ -10,26 +10,9 @@ export default function computeBuffers(params) {
         index: null,
         position: null,
         normal: null,
-        // 2 UV set per tile: wgs84 (uv_0) and pm (uv_1)
-        //    - wgs84: 1 texture per tile because tiles are using wgs84 projection
-        //    - pm: use multiple textures per tile.
-        //      +-------------------------+
-        //      |                         |
-        //      |     Texture 0           |
-        //      +-------------------------+
-        //      |                         |
-        //      |     Texture 1           |
-        //      +-------------------------+
-        //      |                         |
-        //      |     Texture 2           |
-        //      +-------------------------+
-        //        * u = wgs84.u
-        //        * v = textureid + v in builder texture
-        uvs: [],
         wgs84: null,
         l93: null,
     };
-    const computeUvs = [];
 
     const builder = params.builder;
     const nSeg = params.segment;
@@ -42,21 +25,11 @@ export default function computeBuffers(params) {
     outBuffers.position = new Float32Array(nVertex * 3);
     outBuffers.normal = new Float32Array(nVertex * 3);
 
-    const uvCount = params.builder.uvCount;
-    for (let i = 1; i < uvCount; i++) {
-        outBuffers.uvs[i] = new Float32Array(nVertex * 2);
-    }
     outBuffers.wgs84 = new Float32Array(nVertex * 2);
     outBuffers.l93 = new Float32Array(nVertex * 2);
 
-    computeUvs[0] = () => {};
-    if (params.buildIndexAndUv_0) {
+    if (params.buildIndex) {
         outBuffers.index = new Uint32Array(triangles * 3);
-        outBuffers.uvs[0] = new Float32Array(nVertex * 2);
-        computeUvs[0] = (id, u, v) => {
-            outBuffers.uvs[0][id * 2 + 0] = u;
-            outBuffers.uvs[0][id * 2 + 1] = v;
-        };
     }
     const widthSegments = Math.max(2, Math.floor(nSeg) || 2);
     const heightSegments = Math.max(2, Math.floor(nSeg) || 2);
@@ -71,21 +44,12 @@ export default function computeBuffers(params) {
     for (let y = 0; y <= heightSegments; y++) {
         const verticesRow = [];
         const v = y / heightSegments;
-
         builder.vProjecte(v, params);
 
         for (let x = 0; x <= widthSegments; x++) {
             const u = x / widthSegments;
             const id_m3 = idVertex * 3;
-
             builder.uProjecte(u, params);
-            for (let i = 1; i < uvCount; i++) {
-                const v = builder.computeUvs[i](params);
-                computeUvs[i] = (id) => {
-                    outBuffers.uvs[i][id * 2 + 0] = u;
-                    outBuffers.uvs[i][id * 2 + 1] = v;
-                };
-            }
 
             const vertex = builder.vertexPosition(params, params.projected);
             const normal = builder.vertexNormal(params);
@@ -101,10 +65,6 @@ export default function computeBuffers(params) {
 
             vertex.toArray(outBuffers.position, id_m3);
             normal.toArray(outBuffers.normal, id_m3);
-
-            for (const computeUv of computeUvs) {
-                computeUv(idVertex, u, v);
-            }
 
             outBuffers.wgs84[idVertex * 2 + 0] = params.projected.longitude;
             outBuffers.wgs84[idVertex * 2 + 1] = params.projected.latitude;
@@ -151,7 +111,7 @@ export default function computeBuffers(params) {
 
     let idVertex2 = 0;
 
-    if (params.buildIndexAndUv_0) {
+    if (params.buildIndex) {
         for (let y = 0; y < heightSegments; y++) {
             for (let x = 0; x < widthSegments; x++) {
                 const v1 = vertices[y][x + 1];
@@ -176,18 +136,12 @@ export default function computeBuffers(params) {
             new THREE.Vector3().fromArray(outBuffers.position, 3));
 
         let buildIndexSkirt = function buildIndexSkirt() { };
-        let buildUVSkirt = function buildUVSkirt() { };
 
-        if (params.buildIndexAndUv_0) {
+        if (params.buildIndex) {
             buildIndexSkirt = function buildIndexSkirt(id, v1, v2, v3, v4) {
                 id = bufferize(v1, v2, v3, id);
                 id = bufferize(v1, v3, v4, id);
                 return id;
-            };
-
-            buildUVSkirt = function buildUVSkirt(id) {
-                outBuffers.uvs[0][idVertex * 2 + 0] = outBuffers.uvs[0][id * 2 + 0];
-                outBuffers.uvs[0][idVertex * 2 + 1] = outBuffers.uvs[0][id * 2 + 1];
             };
         }
 
@@ -207,13 +161,6 @@ export default function computeBuffers(params) {
             outBuffers.normal[id_m3 + 1] = outBuffers.normal[id2_m3 + 1];
             outBuffers.normal[id_m3 + 2] = outBuffers.normal[id2_m3 + 2];
 
-            buildUVSkirt(id);
-
-
-            for (let i = 1; i < uvCount; i++) {
-                outBuffers.uvs[i][idVertex * 2 + 0] = outBuffers.uvs[i][id * 2 + 0];
-                outBuffers.uvs[i][idVertex * 2 + 1] = outBuffers.uvs[i][id * 2 + 1];
-            }
             outBuffers.wgs84[idVertex * 2 + 0] = outBuffers.wgs84[id * 2 + 0];
             outBuffers.wgs84[idVertex * 2 + 1] = outBuffers.wgs84[id * 2 + 1];
             outBuffers.l93[idVertex * 2 + 0] = outBuffers.l93[id * 2 + 0];

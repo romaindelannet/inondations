@@ -444,4 +444,3 @@ function _updateVector3(layer, method, nodes, vecCRS, vec, offset, matrices = {}
         return { id: result.texture.id, version: result.texture.version, tile: result.tile };
     }
 }
-

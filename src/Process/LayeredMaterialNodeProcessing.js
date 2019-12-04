@@ -147,9 +147,7 @@ export function updateLayeredMaterialNodeImagery(context, layer, node, parent) {
 
     return context.scheduler.execute(command).then(
         (result) => {
-            // TODO: Handle error : result is undefined in provider. throw error
-            const pitchs = extentsDestination.map((ext, i) => ext.offsetToParent(extentsSource[i], nodeLayer.offsetScales[i]));
-            nodeLayer.setTextures(result, pitchs);
+            nodeLayer.setTextures(result);
             node.layerUpdateState[layer.id].success();
         },
         err => handlingError(err, node, layer, targetLevel, context.view));
@@ -262,7 +260,7 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
             }
 
             node.setBBoxZ(elevation.min, elevation.max, layer.scale);
-            nodeLayer.setTexture(0, elevation.texture, elevation.pitch);
+            nodeLayer.setTexture(0, elevation.texture);
             const nodeParent = parent.material && parent.material.getElevationLayer();
             nodeLayer.replaceNoDataValueFromParent(nodeParent, layer.noDataValue);
         },
