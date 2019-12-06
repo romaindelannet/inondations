@@ -10,6 +10,7 @@ import { ImageryLayers } from 'Layer/Layer';
 
 const subdivisionVector = new THREE.Vector3();
 const boundingSphereCenter = new THREE.Vector3();
+const offsetScale = new THREE.Vector4();
 
 /**
  * @property {InfoTiledGeometryLayer} info - Status information of layer
@@ -379,7 +380,7 @@ class TiledGeometryLayer extends GeometryLayer {
         if (nodeLayer) {
             const currentTexture = nodeLayer.textures[0];
             if (currentTexture && currentTexture.extent) {
-                const offsetScale = nodeLayer.offsetScales[0];
+                node.extent.offsetToParent(nodeLayer.textures[0].coords, offsetScale);
                 const ratio = offsetScale.z;
                 // ratio is node size / texture size
                 if (ratio < 1 / Math.pow(2, this.maxDeltaElevationLevel)) {

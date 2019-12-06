@@ -4,6 +4,7 @@
 varying vec2        vWgs84;
 varying vec2        vPM;
 varying vec2        vL93;
+varying vec2        vUv;
 
 #include <itowns/color_layers_pars_fragment>
 #if MODE == MODE_FINAL

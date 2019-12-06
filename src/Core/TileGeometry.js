@@ -10,6 +10,7 @@ function defaultBuffers(params) {
     buffers.normal = new THREE.BufferAttribute(buffers.normal, 3);
     buffers.wgs84 = new THREE.BufferAttribute(buffers.wgs84, 2);
     buffers.l93 = new THREE.BufferAttribute(buffers.l93, 2);
+    buffers.uv = new THREE.BufferAttribute(buffers.uv, 2);
     return buffers;
 }
 
@@ -24,6 +25,7 @@ class TileGeometry extends THREE.BufferGeometry {
         this.addAttribute('normal', buffers.normal);
         this.addAttribute('wgs84', buffers.wgs84);
         this.addAttribute('l93', buffers.l93);
+        this.addAttribute('uv', buffers.uv);
 
         this.computeBoundingBox();
         this.OBB = {};

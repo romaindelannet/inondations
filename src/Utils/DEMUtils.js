@@ -399,12 +399,14 @@ function _readZ(layer, method, coord, nodes, cache) {
         }
     }
 
+    /*
     // Assuming that tiles are split in 4 children, we lookup the parent that
     // really owns this texture
     const stepsUpInHierarchy = Math.round(Math.log2(1.0 / tileLayer.offsetScales[0].z));
     for (let i = 0; i < stepsUpInHierarchy; i++) {
         tileWithValidElevationTexture = tileWithValidElevationTexture.parent;
     }
+    */
 
     // offset = offset from top-left
     offsetInExtent(pt, tileWithValidElevationTexture.extent, temp.offset);

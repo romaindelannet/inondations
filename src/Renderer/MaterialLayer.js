@@ -83,7 +83,6 @@ class MaterialLayer {
         defineLayerProperty(this, 'zmax', layer.zmax, defaultEle.zmax);
 
         this.textures = [];
-        this.offsetScales = [];
         this.extents = [];
         this.level = EMPTY_TEXTURE_ZOOM;
         this.material = material;
@@ -128,14 +127,12 @@ class MaterialLayer {
         }
         this.level = EMPTY_TEXTURE_ZOOM;
         this.textures = [];
-        this.offsetScales = [];
         this.material.layersNeedUpdate = true;
     }
 
     setTexture(index, texture) {
         this.level = (texture && (index == 0)) ? texture.coords.zoom : this.level;
         this.textures[index] = texture || null;
-        this.offsetScales[index] = offsetScale;
         this.material.layersNeedUpdate = true;
     }
 

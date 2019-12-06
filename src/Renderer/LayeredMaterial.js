@@ -47,13 +47,19 @@ function updateLayersUniforms(uniforms, olayers, max) {
         for (let i = 0, il = layer.textures.length; i < il; ++i, ++count) {
             const t = layer.textures[i];
             if (count < max && t.coords) {
-                const e = t.coords.as('EPSG:4326');
-                if (t.coords.crs == 'WMTS:PM') {
-                    e.south = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * e.south));
-                    e.north = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * e.north));
+                let extent = t.coords;
+                if (extent.crs == 'WMTS:PM') {
+                    extent = extent.as('EPSG:4326');
+                    extent.south = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * extent.south));
+                    extent.north = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * extent.north));
+                } else if (extent.crs == 'WMTS:WGS84') {
+                    extent = extent.as('EPSG:4326');
+                } else if (extent.crs == 'WMTS:TMS:3946') {
+                    extent = extent.as('EPSG:3946');
+                } else {
+                    console.log(t.coords.crs, ' extents are not handled yet');
                 }
-
-                extents[count].set(e.west, e.south, e.east, e.north);
+                extents[count].set(extent.west, extent.south, extent.east, extent.north);
                 textures[count] = t;
                 layers[count] = layer;
             }
@@ -155,6 +161,7 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
         setUniformProperty(this, 'overlayAlpha', 0);
         setUniformProperty(this, 'overlayColor', new THREE.Color(1.0, 0.3, 0.0));
         setUniformProperty(this, 'objectId', 0);
+        setUniformProperty(this, 'extent', fullExtent.clone());
 
         // itownsresearch mod
         // Z displacement (used for water flooding for example)

@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { chooseNextLevelToFetch } from 'Layer/LayerUpdateStrategy';
 import LayerUpdateState from 'Layer/LayerUpdateState';
 import { computeMinMaxElevation } from 'Parser/XbilParser';
@@ -5,6 +6,7 @@ import handlingError from 'Process/handlerNodeError';
 
 export const SIZE_TEXTURE_TILE = 256;
 export const SIZE_DIAGONAL_TEXTURE = Math.pow(2 * (SIZE_TEXTURE_TILE * SIZE_TEXTURE_TILE), 0.5);
+const pitch = new THREE.Vector4();
 
 function materialCommandQueuePriorityFunction(material) {
     // We know that 'node' is visible because commands can only be
@@ -185,10 +187,12 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
         const useMinMaxFromParent = extentsDestination[0].zoom - nodeLayer.zoom > 6;
         if (nodeLayer.textures[0]) {
             if (!useMinMaxFromParent) {
+                node.extent.offsetToParent(nodeLayer.textures[0].coords.as(node.extent.crs), pitch);
+                const boundingSphereCenter = new THREE.Vector3();
                 const { min, max } = computeMinMaxElevation(
                     nodeLayer.textures[0].image.data,
                     SIZE_TEXTURE_TILE, SIZE_TEXTURE_TILE,
-                    nodeLayer.offsetScales[0]);
+                    pitch);
                 node.setBBoxZ(min, max, layer.scale);
             } else {
                 // TODO: to verify we don't pass here,
@@ -238,10 +242,8 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
                 node.layerUpdateState[layer.id].noMoreUpdatePossible();
                 return;
             }
-            const elevation = {
-                texture: textures[0],
-                pitch: extentsDestination[0].offsetToParent(textures[0].coords, nodeLayer.offsetScales[0]),
-            };
+            extentsDestination[0].offsetToParent(textures[0].coords, pitch);
+            const elevation = { texture: textures[0], pitch };
 
             node.layerUpdateState[layer.id].success();
 

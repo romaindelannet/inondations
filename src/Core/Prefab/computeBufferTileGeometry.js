@@ -11,6 +11,7 @@ export default function computeBuffers(params) {
         position: null,
         normal: null,
         wgs84: null,
+        uv: null,
         l93: null,
     };
 
@@ -25,6 +26,7 @@ export default function computeBuffers(params) {
     outBuffers.position = new Float32Array(nVertex * 3);
     outBuffers.normal = new Float32Array(nVertex * 3);
 
+    outBuffers.uv = new Float32Array(nVertex * 2);
     outBuffers.wgs84 = new Float32Array(nVertex * 2);
     outBuffers.l93 = new Float32Array(nVertex * 2);
 
@@ -54,17 +56,11 @@ export default function computeBuffers(params) {
             const vertex = builder.vertexPosition(params, params.projected);
             const normal = builder.vertexNormal(params);
 
-            // move geometry to center world
-            vertex.sub(params.center);
-
-            // align normal to z axis
-            if (params.quatNormalToZ) {
-                vertex.applyQuaternion(params.quatNormalToZ);
-                normal.applyQuaternion(params.quatNormalToZ);
-            }
-
             vertex.toArray(outBuffers.position, id_m3);
             normal.toArray(outBuffers.normal, id_m3);
+
+            outBuffers.uv[idVertex * 2 + 0] = u;
+            outBuffers.uv[idVertex * 2 + 1] = v;
 
             outBuffers.wgs84[idVertex * 2 + 0] = params.projected.longitude;
             outBuffers.wgs84[idVertex * 2 + 1] = params.projected.latitude;
@@ -161,6 +157,8 @@ export default function computeBuffers(params) {
             outBuffers.normal[id_m3 + 1] = outBuffers.normal[id2_m3 + 1];
             outBuffers.normal[id_m3 + 2] = outBuffers.normal[id2_m3 + 2];
 
+            outBuffers.uv[idVertex * 2 + 0] = outBuffers.uv[id * 2 + 0];
+            outBuffers.uv[idVertex * 2 + 1] = outBuffers.uv[id * 2 + 1];
             outBuffers.wgs84[idVertex * 2 + 0] = outBuffers.wgs84[id * 2 + 0];
             outBuffers.wgs84[idVertex * 2 + 1] = outBuffers.wgs84[id * 2 + 1];
             outBuffers.l93[idVertex * 2 + 0] = outBuffers.l93[id * 2 + 0];
