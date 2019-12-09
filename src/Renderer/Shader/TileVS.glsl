@@ -7,6 +7,17 @@ uniform vec4 extent;
 attribute vec2 l93;
 attribute vec2 uv;
 
+struct ColorLayer {
+    int textureOffset;
+    int crs;
+    float effect;
+    float opacity;
+};
+
+
+uniform ColorLayer  colorLayers[NUM_FS_TEXTURES];
+uniform vec4        colorExtents[NUM_FS_TEXTURES];
+
 uniform mat4 modelMatrix;
 uniform bool lightingEnabled;
 
@@ -18,10 +29,11 @@ uniform float zDisplacement;
 #include <fog_pars_vertex>
 varying vec3        vNormal;
 #endif
-varying vec2        vWgs84;
-varying vec2        vPM;
-varying vec2        vL93;
-varying vec2        vUv;
+
+varying vec2 vWgs84;
+varying vec2 vL93;
+varying vec2 vPM;
+varying vec2 vUv[NUM_FS_TEXTURES];
 
 const float PI_OVER_4 = 0.25*PI;
 const float PI_OVER_360 = PI / 360.;
@@ -47,11 +59,20 @@ void main() {
         vec3 normal = vec3(coswgs84.y*coswgs84.x, coswgs84.y*sinwgs84.x, sinwgs84.y);
         #endif
 
-        vWgs84 = wgs84;
-        vPM = vec2(wgs84.x, clamp(log(tan(PI_OVER_4 + PI_OVER_360 * wgs84.y)), -PM_MAX, PM_MAX));
+        vec2 pm = vec2(wgs84.x, clamp(log(abs(tan(PI_OVER_4 + PI_OVER_360 * wgs84.y))), -PM_MAX, PM_MAX));
+
+        vec2 uv;
+        for ( int i = 0; i < NUM_FS_TEXTURES; i ++ ) {
+            uv = wgs84;
+            if (colorLayers[ i ].crs == 1) {
+                uv = pm;
+            }
+            vUv[ i ] =  (uv - colorExtents[ i ].xy) / (colorExtents[ i ].zw - colorExtents[ i ].xy);
+        }
+
         vL93 = l93;
-        vUv = uv;
-        vec2 uv = wgs84;
+        vWgs84 = wgs84;
+        vPM = pm;
         #include <begin_vertex>
         #include <itowns/elevation_vertex>
 

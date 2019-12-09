@@ -21,13 +21,15 @@
     }
 
     float getElevationMode(vec2 uv, sampler2D texture, int mode) {
+        float res = 0.;
+        vec4 color = texture2D( texture, uv );
         if (mode == ELEVATION_RGBA)
-            return decode32(texture2D( texture, uv ).abgr * 255.0);
-        if (mode == ELEVATION_DATA)
-            return texture2D( texture, uv ).w;
-        if (mode == ELEVATION_COLOR)
-            return texture2D( texture, uv ).r;
-        return 0.;
+            res = decode32(color.abgr * 255.0);
+        else if (mode == ELEVATION_DATA)
+            res = color.w;
+        else if (mode == ELEVATION_COLOR)
+            res = color.r;
+        return res;
     }
 
     float getElevation(vec2 uv, sampler2D texture, vec4 extent, Layer layer) {
