@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import CRS from 'Core/Geographic/Crs';
+import OBB from 'Renderer/OBB';
 
 /**
  * A TileMesh is a THREE.Mesh with a geometricError and an OBB
@@ -27,7 +28,7 @@ class TileMesh extends THREE.Mesh {
         this.material.objectId = this.id;
         this.material.extent.set(extent.west, extent.south, extent.east, extent.north);
 
-        this.obb = this.geometry.OBB.clone();
+        this.obb = new OBB().setFromExtent(extent);
         this.boundingSphere = new THREE.Sphere();
         this.obb.box3D.getBoundingSphere(this.boundingSphere);
         this._tms = new Map();

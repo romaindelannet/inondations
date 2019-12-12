@@ -9,7 +9,6 @@ export default function computeBuffers(params) {
         position: null,
     };
 
-    const builder = params.builder;
     const nSeg = params.segment;
     // segments count :
     // Tile : (nSeg + 1) * (nSeg + 1)
@@ -18,10 +17,8 @@ export default function computeBuffers(params) {
     const triangles = (nSeg) * (nSeg) * 2 + (params.disableSkirt ? 0 : 4 * nSeg * 2);
 
     outBuffers.position = new Float32Array(nVertex * 3);
+    outBuffers.index = new Uint32Array(triangles * 3);
 
-    if (params.buildIndex) {
-        outBuffers.index = new Uint32Array(triangles * 3);
-    }
     const widthSegments = Math.max(2, Math.floor(nSeg) || 2);
     const heightSegments = Math.max(2, Math.floor(nSeg) || 2);
 
@@ -30,19 +27,13 @@ export default function computeBuffers(params) {
     let skirt = [];
     const skirtEnd = [];
 
-    builder.prepare(params);
-
     for (let y = 0; y <= heightSegments; y++) {
         const verticesRow = [];
         const v = y / heightSegments;
-        builder.vProjecte(v, params);
 
         for (let x = 0; x <= widthSegments; x++) {
             const u = x / widthSegments;
             const id_m3 = idVertex * 3;
-            builder.uProjecte(u, params);
-
-            builder.vertexPosition(params, params.projected);
 
             outBuffers.position[id_m3 + 0] = u;
             outBuffers.position[id_m3 + 1] = v;
@@ -85,17 +76,15 @@ export default function computeBuffers(params) {
 
     let idVertex2 = 0;
 
-    if (params.buildIndex) {
-        for (let y = 0; y < heightSegments; y++) {
-            for (let x = 0; x < widthSegments; x++) {
-                const v1 = vertices[y][x + 1];
-                const v2 = vertices[y][x];
-                const v3 = vertices[y + 1][x];
-                const v4 = vertices[y + 1][x + 1];
+    for (let y = 0; y < heightSegments; y++) {
+        for (let x = 0; x < widthSegments; x++) {
+            const v1 = vertices[y][x + 1];
+            const v2 = vertices[y][x];
+            const v3 = vertices[y + 1][x];
+            const v4 = vertices[y + 1][x + 1];
 
-                idVertex2 = bufferize(v4, v2, v1, idVertex2);
-                idVertex2 = bufferize(v4, v3, v2, idVertex2);
-            }
+            idVertex2 = bufferize(v4, v2, v1, idVertex2);
+            idVertex2 = bufferize(v4, v3, v2, idVertex2);
         }
     }
 
@@ -105,15 +94,6 @@ export default function computeBuffers(params) {
     // The size of the skirt is now a ratio of the size of the tile.
     // To be perfect it should depend on the real elevation delta but too heavy to compute
     if (!params.disableSkirt) {
-        let buildIndexSkirt = function buildIndexSkirt() { };
-
-        if (params.buildIndex) {
-            buildIndexSkirt = function buildIndexSkirt(id, v1, v2, v3, v4) {
-                id = bufferize(v1, v2, v3, id);
-                id = bufferize(v1, v3, v4, id);
-                return id;
-            };
-        }
 
         for (let i = 0; i < skirt.length; i++) {
             const id = skirt[i];
@@ -131,7 +111,8 @@ export default function computeBuffers(params) {
             const v3 = (idf === 0) ? iStart : idVertex + 1;
             const v4 = skirt[idf];
 
-            idVertex2 = buildIndexSkirt(idVertex2, v1, v2, v3, v4);
+            idVertex2 = bufferize(v1, v2, v3, idVertex2);
+            idVertex2 = bufferize(v1, v3, v4, idVertex2);
 
             idVertex++;
         }

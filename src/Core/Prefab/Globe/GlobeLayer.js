@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import TiledGeometryLayer from 'Layer/TiledGeometryLayer';
 import { ellipsoidSizes } from 'Core/Math/Ellipsoid';
 import { globalExtentTMS, schemeTiles } from 'Core/Geographic/Extent';
-import BuilderEllipsoidTile from 'Core/Prefab/Globe/BuilderEllipsoidTile';
 import { SIZE_DIAGONAL_TEXTURE } from 'Process/LayeredMaterialNodeProcessing';
 
 // matrix to convert sphere to ellipsoid
@@ -59,16 +58,14 @@ class GlobeLayer extends TiledGeometryLayer {
             'WMTS:WGS84',
             'WMTS:PM',
         ];
-        const uvCount = config.tileMatrixSets.length;
-        const builder = new BuilderEllipsoidTile({ projection: 'EPSG:4978', uvCount });
-
-        super(id, object3d || new THREE.Group(), schemeTile, builder, config);
+        super(id, object3d || new THREE.Group(), schemeTile, config);
 
         this.isGlobeLayer = true;
         this.options.defaultPickingRadius = 5;
         this.minSubdivisionLevel = this.minSubdivisionLevel || 2.0;
         this.maxSubdivisionLevel = this.maxSubdivisionLevel || 19.0;
         this.maxDeltaElevation = this.maxDeltaElevation || 4.0;
+        this.tileMatrixSets = config.tileMatrixSets;
 
         this.extent = this.schemeTile[0].clone();
 

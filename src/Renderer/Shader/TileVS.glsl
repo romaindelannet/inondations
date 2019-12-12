@@ -64,7 +64,6 @@ void main() {
         vec2 sinwgs84 = sin(wgs84rad.xy);
         vec3 normal = vec3(coswgs84.y*coswgs84.x, coswgs84.y*sinwgs84.x, sinwgs84.y);
 
-
         vec3 geocent = proj_forward(proj_geocent[0], wgs84rad);
         vec2 l93 = proj_forward(proj_lcc[0], wgs84rad).xy;
         #endif

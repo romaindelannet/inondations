@@ -32,7 +32,6 @@ class TiledGeometryLayer extends GeometryLayer {
      * geometry of the TiledGeometryLayer. It is usually a `THREE.Group`, but it
      * can be anything inheriting from a `THREE.Object3d`.
      * @param {Array} schemeTile - extents Array of root tiles
-     * @param {Object} builder - builder geometry object
      * @param {Object} [config] - Optional configuration, all elements in it
      * will be merged as is in the layer. For example, if the configuration
      * contains three elements `name, protocol, extent`, these elements will be
@@ -42,7 +41,7 @@ class TiledGeometryLayer extends GeometryLayer {
      *
      * @throws {Error} `object3d` must be a valid `THREE.Object3d`.
      */
-    constructor(id, object3d, schemeTile, builder, config) {
+    constructor(id, object3d, schemeTile, config) {
         super(id, object3d, config);
 
         this.isTiledGeometryLayer = true;
@@ -52,16 +51,12 @@ class TiledGeometryLayer extends GeometryLayer {
         this.sseSubdivisionThreshold = this.sseSubdivisionThreshold || 1.0;
 
         this.schemeTile = schemeTile;
-        this.builder = builder;
         this.info = new InfoTiledGeometryLayer(this);
 
         if (!this.schemeTile) {
             throw new Error(`Cannot init tiled layer without schemeTile for layer ${this.id}`);
         }
 
-        if (!this.builder) {
-            throw new Error(`Cannot init tiled layer without builder for layer ${this.id}`);
-        }
 
         this.level0Nodes = [];
         const promises = [];

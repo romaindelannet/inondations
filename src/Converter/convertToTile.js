@@ -40,7 +40,6 @@ function setTileFromTiledLayer(tile, tileLayer) {
 
 export default {
     convert(requester, extent, layer) {
-        const builder = layer.builder;
         const parent = requester;
         const level = (parent !== undefined) ? (parent.level + 1) : 0;
 
@@ -51,7 +50,7 @@ export default {
             disableSkirt: layer.disableSkirt,
         };
 
-        return newTileGeometry(builder, paramsGeometry).then((geometry) => {
+        return newTileGeometry(paramsGeometry).then((geometry) => {
             // build tile mesh
             geometry._count++;
             const crsCount = layer.tileMatrixSets.length;

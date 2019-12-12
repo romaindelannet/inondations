@@ -1,15 +1,13 @@
 import * as THREE from 'three';
-import TileGeometry from 'Core/TileGeometry';
-import BuilderEllipsoidTile from 'Core/Prefab/Globe/BuilderEllipsoidTile';
 import Coordinates from 'Core/Geographic/Coordinates';
 import CRS from 'Core/Geographic/Crs';
 
 // get oriented bounding box of tile
-const builder = new BuilderEllipsoidTile({ projection: 'EPSG:4978', uvCount: 1 });
 const size = new THREE.Vector3();
 const dimension = new THREE.Vector2();
 const center = new THREE.Vector3();
 const coord = new Coordinates('EPSG:4326', 0, 0, 0);
+const coord2 = new Coordinates('EPSG:4978', 0, 0, 0);
 
 class OBB extends THREE.Object3D {
     /**
@@ -127,26 +125,25 @@ class OBB extends THREE.Object3D {
      * @param      {number}        maxHeight  The maximum height of OBB
      * @return     {OBB}           return this object
      */
+
     setFromExtent(extent, minHeight = extent.min || 0, maxHeight = extent.max || 0) {
         if (extent.crs == 'EPSG:4326') {
-            const { sharableExtent, quaternion, position } = builder.computeSharableExtent(extent);
-            // Compute the minimum count of segment to build tile
-            const segment = Math.max(Math.floor(sharableExtent.dimensions(dimension).x / 90 + 1), 2);
-            const paramsGeometry = {
-                extent: sharableExtent,
-                level: 0,
-                segment,
-                disableSkirt: true,
-                builder,
-            };
+            // TODO: this is an approximation, only take the bbox of the 4 corners and the center point
+            this.box3D = new THREE.Box3();
+            extent.center(coord).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
+            coord.setFromValues(extent.east, extent.south, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
+            coord.setFromValues(extent.west, extent.south, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
+            coord.setFromValues(extent.east, extent.north, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
+            coord.setFromValues(extent.west, extent.north, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
+            coord.setFromValues(extent.east, extent.south, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
+            coord.setFromValues(extent.west, extent.south, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
+            coord.setFromValues(extent.east, extent.north, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
+            coord.setFromValues(extent.west, extent.north, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
 
-            const geometry = new TileGeometry(paramsGeometry);
-            this.copy(builder.OBB(geometry.boundingBox));
 
-            this.updateZ(minHeight, maxHeight);
-            this.position.copy(position);
-            this.quaternion.copy(quaternion);
-            this.updateMatrixWorld(true);
+            // this.position.copy(center); ??
+            // this.quaternion.set(0, 0, 0, 1);
+            // this.updateMatrixWorld(true);
         } else if (!extent.isTiledCrs() && CRS.isMetricUnit(extent.crs)) {
             extent.center(coord).toVector3(this.position);
             extent.dimensions(dimension);

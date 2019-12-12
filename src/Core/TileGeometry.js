@@ -18,9 +18,6 @@ class TileGeometry extends THREE.BufferGeometry {
 
         this.setIndex(buffers.index);
         this.addAttribute('position', buffers.position);
-
-        this.computeBoundingBox();
-        this.OBB = {};
     }
 }
 

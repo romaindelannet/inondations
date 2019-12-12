@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import TiledGeometryLayer from 'Layer/TiledGeometryLayer';
 import { globalExtentTMS } from 'Core/Geographic/Extent';
 import CRS from 'Core/Geographic/Crs';
-import PlanarTileBuilder from './PlanarTileBuilder';
 
 /**
  * @property {boolean} isPlanarLayer - Used to checkout whether this layer is a
@@ -46,12 +45,13 @@ class PlanarLayer extends TiledGeometryLayer {
             globalExtentTMS.set(extent.crs, extent);
         }
         config.tileMatrixSets = tileMatrixSets;
-        super(id, object3d || new THREE.Group(), [extent], new PlanarTileBuilder({ projection: extent.crs }), config);
+        super(id, object3d || new THREE.Group(), [extent], config);
         this.isPlanarLayer = true;
         this.extent = extent;
         this.minSubdivisionLevel = this.minSubdivisionLevel || 0;
         this.maxSubdivisionLevel = this.maxSubdivisionLevel || 5.0;
         this.maxDeltaElevation = this.maxDeltaElevation || 4.0;
+        this.tileMatrixSets = config.tileMatrixSets;
     }
 }
 
