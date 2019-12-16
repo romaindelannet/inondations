@@ -31,6 +31,7 @@ class TileMesh extends THREE.Mesh {
         this.obb = new OBB().setFromExtent(extent);
         this.boundingSphere = new THREE.Sphere();
         this.obb.box3D.getBoundingSphere(this.boundingSphere);
+        this.boundingSphere.center.applyQuaternion(this.obb.quaternion);
         this._tms = new Map();
 
         for (const tms of layer.tileMatrixSets) {
@@ -57,6 +58,7 @@ class TileMesh extends THREE.Mesh {
         if (min == undefined && max == undefined) {
             return;
         }
+        this.material.skirtHeight = Math.max(1, max - min);
         // FIXME: Why the floors ? This is not conservative : the obb may be too short by almost 1m !
         if (Math.floor(min) !== Math.floor(this.obb.z.min) || Math.floor(max) !== Math.floor(this.obb.z.max)) {
             this.obb.updateZ(min, max, scale);
@@ -64,6 +66,7 @@ class TileMesh extends THREE.Mesh {
                 this.horizonCullingPointElevationScaled.setLength(this.obb.z.delta + this.horizonCullingPoint.length());
             }
             this.obb.box3D.getBoundingSphere(this.boundingSphere);
+            this.boundingSphere.center.applyQuaternion(this.obb.quaternion);
         }
     }
 

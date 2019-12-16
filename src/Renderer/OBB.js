@@ -8,6 +8,9 @@ const dimension = new THREE.Vector2();
 const center = new THREE.Vector3();
 const coord = new Coordinates('EPSG:4326', 0, 0, 0);
 const coord2 = new Coordinates('EPSG:4978', 0, 0, 0);
+const axisZ = new THREE.Vector3(0, 0, 1);
+const axisY = new THREE.Vector3(0, 1, 0);
+const quat = new THREE.Quaternion();
 
 class OBB extends THREE.Object3D {
     /**
@@ -128,22 +131,30 @@ class OBB extends THREE.Object3D {
 
     setFromExtent(extent, minHeight = extent.min || 0, maxHeight = extent.max || 0) {
         if (extent.crs == 'EPSG:4326') {
+            extent.center(coord).as('EPSG:4978', coord2).toVector3(center);
+            this.quaternion.set(0, 0, 0, 1);
+            this.position.set(0, 0, 0); // copy(center);
+            const rotLon = THREE.Math.degToRad(coord.longitude);
+            const rotLat = THREE.Math.degToRad(90 - coord.latitude);
+            this.quaternion.setFromAxisAngle(axisZ, rotLon);
+            quat.setFromAxisAngle(axisY, rotLat);
+            this.quaternion.multiply(quat);
+            quat.copy(this.quaternion);
+            quat.inverse();
             // TODO: this is an approximation, only take the bbox of the 4 corners and the center point
             this.box3D = new THREE.Box3();
-            extent.center(coord).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
-            coord.setFromValues(extent.east, extent.south, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
-            coord.setFromValues(extent.west, extent.south, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
-            coord.setFromValues(extent.east, extent.north, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
-            coord.setFromValues(extent.west, extent.north, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
-            coord.setFromValues(extent.east, extent.south, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
-            coord.setFromValues(extent.west, extent.south, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
-            coord.setFromValues(extent.east, extent.north, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
-            coord.setFromValues(extent.west, extent.north, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center);
-
-
-            // this.position.copy(center); ??
-            // this.quaternion.set(0, 0, 0, 1);
-            // this.updateMatrixWorld(true);
+            coord.altitude = minHeight; coord.as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center.applyQuaternion(quat));
+            coord.altitude = maxHeight; coord.as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center.applyQuaternion(quat));
+            coord.setFromValues(extent.east, extent.south, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center.applyQuaternion(quat));
+            coord.setFromValues(extent.west, extent.south, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center.applyQuaternion(quat));
+            coord.setFromValues(extent.east, extent.north, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center.applyQuaternion(quat));
+            coord.setFromValues(extent.west, extent.north, minHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center.applyQuaternion(quat));
+            coord.setFromValues(extent.east, extent.south, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center.applyQuaternion(quat));
+            coord.setFromValues(extent.west, extent.south, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center.applyQuaternion(quat));
+            coord.setFromValues(extent.east, extent.north, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center.applyQuaternion(quat));
+            coord.setFromValues(extent.west, extent.north, maxHeight).as('EPSG:4978', coord2).toVector3(center); this.box3D.expandByPoint(center.applyQuaternion(quat));
+            this.natBox.copy(this.box3D);
+            this.updateMatrixWorld(true);
         } else if (!extent.isTiledCrs() && CRS.isMetricUnit(extent.crs)) {
             extent.center(coord).toVector3(this.position);
             extent.dimensions(dimension);

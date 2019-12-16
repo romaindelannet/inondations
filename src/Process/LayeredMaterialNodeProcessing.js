@@ -188,7 +188,6 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
         if (nodeLayer.textures[0]) {
             if (!useMinMaxFromParent) {
                 node.extent.offsetToParent(nodeLayer.textures[0].coords.as(node.extent.crs), pitch);
-                const boundingSphereCenter = new THREE.Vector3();
                 const { min, max } = computeMinMaxElevation(
                     nodeLayer.textures[0].image.data,
                     SIZE_TEXTURE_TILE, SIZE_TEXTURE_TILE,

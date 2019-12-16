@@ -132,15 +132,18 @@ export default function createTileDebugUI(datDebugTool, view, layer, debugInstan
                 // add the ability to hide all the debug obj for one layer at once
                 const l = context.view.getLayerById(layer.id);
                 const l3js = l.threejsLayer;
+                if (!node.color) {
+                  node.color = new THREE.Color(Math.random(), Math.random(), Math.random());
+                }
 
                 if (layer.id == obb_layer_id) {
                     helper = new OBBHelper(node.obb, `id:${node.id}`);
+                    helper.material.color.copy(node.color);
                     if (helper.children[0]) {
                         helper.children[0].layers.set(l3js);
                     }
                 } else if (layer.id == sb_layer_id) {
-                    const color = new THREE.Color(Math.random(), Math.random(), Math.random());
-                    const material = new THREE.MeshBasicMaterial({ color: color.getHex(), wireframe: true });
+                    const material = new THREE.MeshBasicMaterial({ color: node.color.getHex(), wireframe: true });
                     helper = new THREE.Mesh(geometrySphere, material);
                     helper.position.copy(node.boundingSphere.center);
                     helper.scale.multiplyScalar(node.boundingSphere.radius);

@@ -94,7 +94,6 @@ export default function computeBuffers(params) {
     // The size of the skirt is now a ratio of the size of the tile.
     // To be perfect it should depend on the real elevation delta but too heavy to compute
     if (!params.disableSkirt) {
-
         for (let i = 0; i < skirt.length; i++) {
             const id = skirt[i];
             const id_m3 = idVertex * 3;

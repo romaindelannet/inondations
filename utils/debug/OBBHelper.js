@@ -85,6 +85,9 @@ class OBBHelper extends THREE.LineSegments {
         const position = this.geometry.attributes.position;
         const array = position.array;
 
+        this.quaternion.copy(OBB.quaternion);
+        this.position.copy(OBB.position);
+
         OBB.toPoints(points);
         let offset = 0;
         for (const pt of points) {
