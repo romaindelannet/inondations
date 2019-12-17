@@ -62,7 +62,7 @@ void main() {
 
     vec2 riskUv = (vLcc - riskExtent.xy) / (riskExtent.zw - riskExtent.xy);
     if (riskUv.x > 0. && riskUv.y > 0. && riskUv.x < 1. && riskUv.y < 1.) {
-      float risk = (texture2D( riskTexture, riskUv).r * 256. - 1.)/(15. - 1.);
+      float risk = (texture2D( riskTexture, riskUv).r * 255. - 1.)/(15. - 1.);
       if (risk > 1./255.) risk = 1. - risk;
       gl_FragColor.r = mix(gl_FragColor.r, 1., risk);
       color = getOutlineColor( vec3(1.), riskUv);
