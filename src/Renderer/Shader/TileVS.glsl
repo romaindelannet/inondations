@@ -29,8 +29,8 @@ uniform float zDisplacement;
 varying vec3        vNormal;
 #endif
 
-varying vec2 vWgs84;
-varying vec2 vL93;
+varying vec2 vLatlon;
+varying vec2 vLcc;
 varying vec2 vPM;
 varying vec2 vUv[NUM_FS_TEXTURES];
 
@@ -39,10 +39,6 @@ const float PI_OVER_2 = 0.5*PI;
 const float PI_OVER_360 = PI / 360.;
 const float PM_MAX = PI * 85.0511287798066 / 90.;
 
-#define TILE_CRS_DEFAULT 0
-#define TILE_CRS_CARTESIAN 1
-#define TILE_CRS_CARTOGRAPHIC 2
-#define TILE_CRS TILE_CRS_CARTOGRAPHIC
 uniform vec3 inv_radii_squared;
 
 #include <proj/geocent>
@@ -51,40 +47,66 @@ uniform geocent_t proj_geocent[1];
 uniform lcc_t proj_lcc[1];
 
 void main() {
-        vec3 wgs84 = vec3(extent.xy + position.xy * (extent.zw - extent.xy), position.z * skirtHeight);
+        vec3 tile_position = vec3(extent.xy + position.xy * (extent.zw - extent.xy), position.z * skirtHeight);
 
-        #if TILE_CRS == TILE_CRS_DEFAULT
+        #if CRS_TILE == CRS_GEOCENT
         vec3 normal = normalize(inv_radii_squared * position);
-        #elif TILE_CRS == TILE_CRS_CARTESIAN
+
+        #elif CRS_TILE == CRS_PM
         vec3 normal = vec3(0., 0., 1.);
-        #else //  TILE_CRS == TILE_CRS_CARTOGRAPHIC
+        vec2 pm = tile_position.xy;
+        vec3 transformed = tile_position;
 
-        vec3 wgs84rad = vec3(wgs84.xy * (PI / 180.), wgs84.z);
-        vec2 coswgs84 = cos(wgs84rad.xy);
-        vec2 sinwgs84 = sin(wgs84rad.xy);
-        vec3 normal = vec3(coswgs84.y*coswgs84.x, coswgs84.y*sinwgs84.x, sinwgs84.y);
+        vec3 latlon = tile_position;
+        float b = 6378137.;
+        latlon.xy /= b;
+        latlon.x /= PI / 180.;
+        latlon.y = (atan(exp(latlon.y))  - PI_OVER_4 ) / PI_OVER_360;
+        vec3 latlonrad = vec3(latlon.xy * (PI / 180.), latlon.z);
+        vec3 lcc = proj_forward(proj_lcc[0], latlonrad);
 
-        vec3 geocent = proj_forward(proj_geocent[0], wgs84rad);
-        vec2 l93 = proj_forward(proj_lcc[0], wgs84rad).xy;
+        #elif CRS_TILE == CRS_LCC
+        vec3 normal = vec3(0., 0., 1.);
+        vec3 lcc = tile_position;
+        vec3 latlonrad = proj_inverse(proj_lcc[0], lcc);
+        vec3 latlon = vec3(latlonrad.xy * (180. / PI), latlonrad.z);
+        vec3 transformed = lcc;
+
+        #else //  CRS_TILE == CRS_LATLON
+
+        vec3 latlon = tile_position;
+        vec3 latlonrad = vec3(latlon.xy * (PI / 180.), latlon.z);
+        vec2 coslatlon = cos(latlonrad.xy);
+        vec2 sinlatlon = sin(latlonrad.xy);
+        vec3 normal = vec3(coslatlon.y*coslatlon.x, coslatlon.y*sinlatlon.x, sinlatlon.y);
+
+        vec3 geocent = proj_forward(proj_geocent[0], latlonrad);
+        vec3 lcc = proj_forward(proj_lcc[0], latlonrad);
+        vec3 transformed = geocent;
         #endif
 
 
-        vec2 pm = vec2(wgs84.x, clamp(log(abs(tan(PI_OVER_4 + PI_OVER_360 * wgs84.y))), -PM_MAX, PM_MAX));
+        #if CRS_TILE != CRS_PM
+        float b = 6378137.;
+        vec2 pm = vec2(latlon.x * b * PI / 180., b * clamp(log(abs(tan(PI_OVER_4 + PI_OVER_360 * latlon.y))), -PM_MAX, PM_MAX));
+        // vec2 pm = vec2(latlon.x, clamp(log(abs(tan(PI_OVER_4 + PI_OVER_360 * latlon.y))), -PM_MAX, PM_MAX));
+        #endif
 
         vec2 uv;
         for ( int i = 0; i < NUM_FS_TEXTURES; i ++ ) {
-            uv = wgs84.xy;
-            if (colorLayers[ i ].crs == 1) {
+            uv = latlon.xy;
+            if (colorLayers[ i ].crs == CRS_PM) {
                 uv = pm;
+            } else if (colorLayers[ i ].crs == CRS_LCC) {
+                uv = lcc.xy;
             }
             vUv[ i ] =  (uv - colorExtents[ i ].xy) / (colorExtents[ i ].zw - colorExtents[ i ].xy);
         }
 
-        vL93 = l93;
-        vWgs84 = wgs84.xy;
+        vLcc = lcc.xy;
+        vLatlon = latlon.xy;
         vPM = pm;
 
-        vec3 transformed = geocent;
 
         #include <itowns/elevation_vertex>
 

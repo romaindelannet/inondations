@@ -649,6 +649,25 @@ class Extent {
         this.clampSouthNorth(extent.south, extent.north);
         return this.clampWestEast(extent.west, extent.east);
     }
+
+
+    toVector4(target) {
+        target = target || new THREE.Vector4();
+        target.x = this.east;
+        target.y = this.south;
+        target.z = this.west;
+        target.w = this.north;
+        return target;
+    }
+
+    setFromWorldFile(worldfile, image) {
+        const values = worldfile.trim().split('\n');
+        this.east = Number(values[4]);
+        this.north = Number(values[5]);
+        this.west = this.east + Number(values[0]) * image.width;
+        this.south = this.north + Number(values[3]) * image.height;
+        return this;
+    }
 }
 
 _extent = new Extent('EPSG:4326', [0, 0, 0, 0]);

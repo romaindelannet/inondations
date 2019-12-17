@@ -5,8 +5,17 @@ import ShaderUtils from 'Renderer/Shader/ShaderUtils';
 import Capabilities from 'Core/System/Capabilities';
 import RenderMode from 'Renderer/RenderMode';
 import MaterialLayer from 'Renderer/MaterialLayer';
+import Extent from 'Core/Geographic/Extent';
 
 const fullExtent = new THREE.Vector4(-180, -90, 180, 90);
+
+const riskExtent = new THREE.Vector4(0, 0, 0, 0);
+const riskTexture = new THREE.TextureLoader().load('images/risk.png', (texture) => {
+    fetch('images/risk.wld').then(response => response.text()).then((worldFile) => {
+        texture.extent = new Extent('EPSG:2154', 0, 0, 0, 0).setFromWorldFile(worldFile, texture.image);
+        texture.extent.toVector4(riskExtent);
+    });
+});
 
 // from three.js packDepthToRGBA
 const UnpackDownscale = 255 / 256; // 0..1 -> fraction (excluding 1)
@@ -69,9 +78,21 @@ function updateLayersUniforms(uniforms, olayers, max) {
             if (count < max && t.coords) {
                 let extent = t.coords;
                 if (extent.crs == 'WMTS:PM') {
+                    const b = 6378137;
+                    extent = extent.as('EPSG:3857');
+                    /* equivalent to
                     extent = extent.as('EPSG:4326');
-                    extent.south = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * extent.south));
-                    extent.north = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * extent.north));
+                    extent.east = extent.east * b * 2 * PI_OVER_360;
+                    extent.west = extent.west * b * 2 * PI_OVER_360;
+                    extent.south = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * extent.south)) * b;
+                    extent.north = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * extent.north)) * b;
+                    */
+                    /*
+                    extent.east /= b * 2 * PI_OVER_360;
+                    extent.west /= b * 2 * PI_OVER_360;
+                    extent.south /= b;
+                    extent.north /= b;
+                    */
                 } else if (extent.crs == 'WMTS:WGS84') {
                     extent = extent.as('EPSG:4326');
                 } else if (extent.crs == 'WMTS:TMS:3946') {
@@ -128,6 +149,27 @@ export const ELEVATION_MODES = {
     DATA: 2,
 };
 
+export const CRS_DEFINES = {
+    LATLON: 0,
+    LCC: 1,
+    GEOCENT: 2,
+    PM: 3,
+};
+
+export function tile_crs_define(crs) {
+    // layer.parent.tileMatrixSets.indexOf(CRS.formatToTms(layer.projection))
+    if (crs == 'EPSG:4326' || crs == 'WMTS:WGS84') {
+        return CRS_DEFINES.LATLON;
+    } else if (crs == 'EPSG:3857' || crs == 'WMTS:PM') {
+        return CRS_DEFINES.PM;
+    } else if (crs == 'EPSG:2154' || crs == 'EPSG:3946') {
+        return CRS_DEFINES.LCC;
+    } else {
+        console.error(crs, ' extents are not handled yet');
+        return -1;
+    }
+}
+
 let nbSamplers;
 const fragmentShader = [];
 class LayeredMaterial extends THREE.RawShaderMaterial {
@@ -143,8 +185,10 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
         this.defines.USE_FOG = 1;
         this.defines.NUM_CRS = crsCount;
 
+        setDefineMapping(this, 'CRS', CRS_DEFINES);
         setDefineMapping(this, 'ELEVATION', ELEVATION_MODES);
         setDefineMapping(this, 'MODE', RenderMode.MODES);
+        setDefineProperty(this, 'crs', 'CRS_TILE', CRS_DEFINES.LATLON);
         setDefineProperty(this, 'mode', 'MODE', RenderMode.MODES.FINAL);
 
         if (__DEBUG__) {
@@ -223,6 +267,9 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
 
         this.uniforms.proj_geocent = new THREE.Uniform([proj_wgs84]);
         this.uniforms.proj_lcc = new THREE.Uniform([proj_l93]);
+
+        this.uniforms.riskTexture = new THREE.Uniform(riskTexture);
+        this.uniforms.riskExtent = new THREE.Uniform(riskExtent);
     }
 
     getUniformByType(type) {
@@ -232,6 +279,12 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
             extents: this.uniforms[`${type}Extents`],
             textureCount: this.uniforms[`${type}TextureCount`],
         };
+    }
+
+    setExtent(extent) {
+        this.extent.set(extent.west, extent.south, extent.east, extent.north);
+        this.crs = tile_crs_define(extent.crs);
+        // console.log(this.crs, 'tile', extent.crs);
     }
 
     updateLayersUniforms() {
@@ -245,6 +298,7 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
         updateLayersUniforms(this.getUniformByType('elevation'), elevationLayers, this.defines.NUM_VS_TEXTURES);
         // console.log(this.uniforms.elevationExtents.value[0]);
         // }
+
         this.layersNeedUpdate = false;
     }
 

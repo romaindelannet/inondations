@@ -133,7 +133,7 @@ export default function createTileDebugUI(datDebugTool, view, layer, debugInstan
                 const l = context.view.getLayerById(layer.id);
                 const l3js = l.threejsLayer;
                 if (!node.color) {
-                  node.color = new THREE.Color(Math.random(), Math.random(), Math.random());
+                    node.color = new THREE.Color(Math.random(), Math.random(), Math.random());
                 }
 
                 if (layer.id == obb_layer_id) {
