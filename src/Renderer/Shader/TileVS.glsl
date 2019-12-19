@@ -89,12 +89,11 @@ void main() {
 
         #if CRS_TILE != CRS_PM
         vec3 pm = latlon;
-        float y = latlon.y; // extent.w; // s0.5*(extent.y+extent.w);
-        pm.y = log(abs(tan(PI_OVER_4 + 0.5 * y)));
-        /*
-        float dy = latlon.y-y;
-        pm.y += dy/cos(y);//*(1.0+5.0*dy*tan(y));
-        */
+        float tany = tan(0.5*latlon.y);
+        pm.y = log(1.0+tany)-log(1.0-tany);
+        // pm.y = log((1.0+tany)/(1.0-tany)); // equivalent
+        // pm.y = atanh(sin(latlon.y)); // atanh is not yet available in ES1.0
+        // pm.y = log(tan(PI_OVER_4+0.5*latlon.y)); // precision issues at high zooms
         pm.y = clamp(pm.y, -PM_MAX, PM_MAX);
         #endif
 

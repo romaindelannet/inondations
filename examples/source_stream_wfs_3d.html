@@ -54,8 +54,8 @@
                 var layer = new itowns.ElevationLayer(config.id, config);
                 view.addLayer(layer).then(menuGlobe.addLayerGUI.bind(menuGlobe));
             }
-            itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
-            itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
+            //itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
+            //itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
 
             var color = new itowns.THREE.Color();
             var tile;
@@ -112,7 +112,8 @@
                 update: itowns.FeatureProcessing.update,
                 convert: itowns.Feature2Mesh.convert({
                     color: colorLine,
-                    altitude: altitudeLine }),
+                  //  altitude: altitudeLine
+                  }),
                 linewidth: 5,
                 filter: acceptFeatureBus,
                 source: lyonTclBusSource
@@ -129,7 +130,7 @@
             }
 
             function altitudeBuildings(properties) {
-                return properties.z_min - properties.hauteur;
+                return 0; // properties.z_min - properties.hauteur;
             }
 
             function extrudeBuildings(properties) {
@@ -157,7 +158,7 @@
                 meshes = meshes.filter(function filter(m) { return m.scale.z < 1; });
             };
 
-            view.addFrameRequester(itowns.MAIN_LOOP_EVENTS.BEFORE_RENDER, scaler);
+            // view.addFrameRequester(itowns.MAIN_LOOP_EVENTS.BEFORE_RENDER, scaler);
 
             var wfsBuildingSource = new itowns.WFSSource({
                 url: 'https://wxs.ign.fr/3ht7xcw6f7nciopo16etuqp2/geoportail/wfs?',
@@ -181,9 +182,10 @@
                     color: colorBuildings,
                     batchId: function (property, featureId) { return featureId; },
                     altitude: altitudeBuildings,
-                    extrude: extrudeBuildings }),
+                    extrude: extrudeBuildings
+                  }),
                 onMeshCreated: function scaleZ(mesh) {
-                    mesh.scale.z = 0.01;
+                  //  mesh.scale.z = 0.01;
                     meshes.push(mesh);
                 },
                 filter: acceptFeature,
