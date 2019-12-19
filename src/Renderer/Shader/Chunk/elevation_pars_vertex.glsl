@@ -1,6 +1,7 @@
 #if NUM_VS_TEXTURES > 0
     struct Layer {
         int crs;
+        int crs_id;
         float scale;
         float bias;
         int mode;

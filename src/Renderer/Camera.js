@@ -54,6 +54,7 @@ function Camera(crs, width, height, options = {}) {
     Object.defineProperty(this, 'crs', { get: () => crs });
 
     this.camera3D = options.camera ? options.camera : new THREE.PerspectiveCamera(30, width / height);
+    Object.defineProperty(this.camera3D, 'crs', { get: () => crs });
 
     this._viewMatrix = new THREE.Matrix4();
     this.width = width;

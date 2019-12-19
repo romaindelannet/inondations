@@ -151,11 +151,15 @@ export default {
                     quaternion.setFromRotationMatrix(node.matrixWorld).inverse();
                     // const quaternion = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), node.extent.center().geodesicNormal).inverse();
                     applyOffset(result, tmp, quaternion, result.minAltitude);
+                    result.position.copy(tmp.negate());
+                    result.updateMatrixWorld();
                 }
 
+                /* disabled: this requires the local frame of result to be z-up
                 if (result.minAltitude) {
                     result.position.z = result.minAltitude;
                 }
+                */
                 result.layer = layer;
                 node.add(result);
                 node.updateMatrixWorld();

@@ -25,4 +25,3 @@ function push(object3d, mode) {
 // According to the rendering mode, the material's object switches
 // the mode property of the materials
 export default { MODES, push };
-
