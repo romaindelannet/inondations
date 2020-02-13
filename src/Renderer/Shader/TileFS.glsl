@@ -12,9 +12,12 @@
 
 uniform vec3        diffuse;
 uniform float       opacity;
-varying vec2 vLcc;
-varying vec2 vLatlon;
-varying vec2 vPM;
+varying vec3 vLcc[2];
+varying vec3 vLatlon;
+varying vec3 vPM;
+
+#include <proj/lcc>
+uniform lcc_t proj_lcc[2];
 
 uniform vec4 riskExtent;
 uniform sampler2D riskTexture;
@@ -61,13 +64,16 @@ void main() {
     #include <itowns/overlay_fragment>
 
     // gl_FragColor.rg = mix(gl_FragColor.rg,fract(vLatlon/10.),0.1);
-    vec4 lccExtent = vec4(-357823.2365, 6037008.6939, 1313632.3628, 7230727.3772);
-    if (lccExtent.x < vLcc.x && vLcc.x < lccExtent.z && lccExtent.y  < vLcc.y && vLcc.y < lccExtent.w)
-      gl_FragColor.rg = mix(gl_FragColor.rg,fract(vLcc/100000.),0.2);
+    vec4 lcc0Extent = proj_lcc[0].extent;
+    vec4 lcc1Extent = proj_lcc[1].extent;
 
-    vec2 riskUv = (vLcc - riskExtent.xy) / (riskExtent.zw - riskExtent.xy);
+    if (lcc0Extent.x < vLcc[0].x && vLcc[0].x < lcc0Extent.z && lcc0Extent.y  < vLcc[0].y && vLcc[0].y < lcc0Extent.w)
+      gl_FragColor.rg = mix(gl_FragColor.rg,fract(vLcc[0].xy/100000.),0.2);
+
+    vec2 riskUv = (vLcc[0].xy - riskExtent.xy) / (riskExtent.zw - riskExtent.xy);
     if (riskUv.x > 0. && riskUv.y > 0. && riskUv.x < 1. && riskUv.y < 1.) {
-      float risk = (texture2D( riskTexture, riskUv).r * 256. - 1.)/(15. - 1.);
+      float risk = (texture2D( riskTexture, riskUv).r * 255. - 1.)/(15. - 1.);
+      // a nettoyer
       // if (risk > 1./255.) risk = 1. - risk;
       // gl_FragColor.b = mix(gl_FragColor.b, 1., risk);
       // color = getOutlineColor( vec3(1.), riskUv);

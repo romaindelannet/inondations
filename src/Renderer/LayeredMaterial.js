@@ -14,6 +14,11 @@ const riskTexture = new THREE.TextureLoader().load('images/risk.png', (texture) 
     fetch('images/risk.wld').then(response => response.text()).then((worldFile) => {
         texture.extent = new Extent('EPSG:2154', 0, 0, 0, 0).setFromWorldFile(worldFile, texture.image);
         texture.extent.toVector4(riskExtent);
+
+        riskExtent.x -= 700000;
+        riskExtent.y -= 6600000;
+        riskExtent.z -= 700000;
+        riskExtent.w -= 6600000;
     });
 });
 
@@ -38,7 +43,15 @@ const proj_l93 = {
     ns: 0.725607765053269,
     af0: 11754255.426096005,
     rh: 6055612.049875989,
+    extent: new THREE.Vector4(-357823.2365, 6037008.6939, 1313632.3628, 7230727.3772),
 };
+proj_l93.extent.x -= proj_l93.p0.x;
+proj_l93.extent.y -= proj_l93.p0.y;
+proj_l93.extent.z -= proj_l93.p0.x;
+proj_l93.extent.w -= proj_l93.p0.y;
+proj_l93.p0_ = proj_l93.p0.clone();
+proj_l93.p0.set(0, 0, 0);
+
 const proj_wgs84 = {
     a: 6378137,
     b: 6356752.314245179,
@@ -49,13 +62,38 @@ const proj_wgs84 = {
     k0: 1,
 };
 
+const proj_3946 = {
+    lon0: 0.05235987755982989,
+    p0: new THREE.Vector3(1700000, 5200000, 0),
+    k0: 1,
+    e: 0.08181919104281582,
+    ns: 0.7193606118567344,
+    af0: 11799460.698060647,
+    rh: 6169285.637549045,
+    extent: new THREE.Vector4(621509.63, 4747818.41, 2213517.21, 5843051.80),
+};
+/*
+proj_3946.extent.x -= proj_3946.p0.x;
+proj_3946.extent.y -= proj_3946.p0.y;
+proj_3946.extent.z -= proj_3946.p0.x;
+proj_3946.extent.w -= proj_3946.p0.y;
+proj_3946.p0_ = proj_l93.p0.clone();
+proj_3946.p0.set(0, 0, 0);
+*/
+const crs_defintions = [
+    [],
+    [proj_l93, proj_3946],
+    [proj_wgs84],
+    [],
+];
+
 // Max sampler color count to LayeredMaterial
 // Because there's a statement limitation to unroll, in getColorAtIdUv method
 const maxSamplersColorCount = 15;
 const samplersElevationCount = 1;
 
-const PI_OVER_4 = 0.25 * Math.PI;
-const PI_OVER_360 = Math.PI / 360.0;
+// const PI_OVER_4 = 0.25 * Math.PI;
+// const PI_OVER_360 = Math.PI / 360.0;
 
 export function getMaxColorSamplerUnitsCount() {
     const maxSamplerUnitsCount = Capabilities.getMaxTextureUnitsCount() - 2;
@@ -78,27 +116,31 @@ function updateLayersUniforms(uniforms, olayers, max) {
             if (count < max && t.coords) {
                 let extent = t.coords;
                 if (extent.crs == 'WMTS:PM') {
-                    const b = 6378137;
                     extent = extent.as('EPSG:3857');
-                    /* equivalent to
-                    extent = extent.as('EPSG:4326');
-                    extent.east = extent.east * b * 2 * PI_OVER_360;
-                    extent.west = extent.west * b * 2 * PI_OVER_360;
-                    extent.south = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * extent.south)) * b;
-                    extent.north = Math.log(Math.tan(PI_OVER_4 + PI_OVER_360 * extent.north)) * b;
-                    */
-                    /*
-                    extent.east /= b * 2 * PI_OVER_360;
-                    extent.west /= b * 2 * PI_OVER_360;
+                    const b = proj_wgs84.a;
+                    extent.east /= b;
+                    extent.west /= b;
                     extent.south /= b;
                     extent.north /= b;
-                    */
                 } else if (extent.crs == 'WMTS:WGS84') {
                     extent = extent.as('EPSG:4326');
+                    extent.east = THREE.Math.degToRad(extent.east);
+                    extent.west = THREE.Math.degToRad(extent.west);
+                    extent.south = THREE.Math.degToRad(extent.south);
+                    extent.north = THREE.Math.degToRad(extent.north);
                 } else if (extent.crs == 'WMTS:TMS:3946') {
                     extent = extent.as('EPSG:3946');
                 } else {
                     console.warn(t.coords.crs, ' extents are not handled yet');
+                }
+                const crs = crs_define(extent.crs);
+                const crs_defintion = crs_defintions[crs[0]][crs[1]];
+                if (crs_defintion && crs_defintion.p0_) {
+                    console.log(extent.crs, crs_defintion.p0_);
+                    extent.east -= crs_defintion.p0_.x;
+                    extent.west -= crs_defintion.p0_.x;
+                    extent.north -= crs_defintion.p0_.y;
+                    extent.south -= crs_defintion.p0_.y;
                 }
                 extents[count].set(extent.west, extent.south, extent.east, extent.north);
                 textures[count] = t;
@@ -156,20 +198,25 @@ export const CRS_DEFINES = {
     PM: 3,
 };
 
-export function tile_crs_define(crs) {
+export function crs_define(crs) {
     // layer.parent.tileMatrixSets.indexOf(CRS.formatToTms(layer.projection))
     if (crs == 'EPSG:4326' || crs == 'WMTS:WGS84') {
-        return CRS_DEFINES.LATLON;
+        return [CRS_DEFINES.LATLON, 0];
     } else if (crs == 'EPSG:3857' || crs == 'WMTS:PM') {
-        return CRS_DEFINES.PM;
-    } else if (crs == 'EPSG:2154' || crs == 'EPSG:3946') {
-        return CRS_DEFINES.LCC;
+        return [CRS_DEFINES.PM, 0];
+    } else if (crs == 'EPSG:2154') {
+        return [CRS_DEFINES.LCC, 0];
+    } else if (crs == 'EPSG:3946') {
+        return [CRS_DEFINES.LCC, 1];
+    } else if (crs == 'EPSG:4978') {
+        return [CRS_DEFINES.GEOCENT, 0];
     } else {
         console.error(crs, ' extents are not handled yet');
-        return -1;
+        return undefined;
     }
 }
 
+let logged = false;
 let nbSamplers;
 const fragmentShader = [];
 class LayeredMaterial extends THREE.RawShaderMaterial {
@@ -192,7 +239,10 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
         setDefineMapping(this, 'CRS', CRS_DEFINES);
         setDefineMapping(this, 'ELEVATION', ELEVATION_MODES);
         setDefineMapping(this, 'MODE', RenderMode.MODES);
-        setDefineProperty(this, 'crs', 'CRS_TILE', CRS_DEFINES.LATLON);
+        setDefineProperty(this, 'tile_crs', 'CRS_TILE', CRS_DEFINES.LATLON);
+        setDefineProperty(this, 'view_crs', 'CRS_VIEW', CRS_DEFINES.GEOCENT);
+        setDefineProperty(this, 'tile_id_crs', 'CRS_ID_TILE', 0);
+        setDefineProperty(this, 'view_id_crs', 'CRS_ID_VIEW', 0);
         setDefineProperty(this, 'mode', 'MODE', RenderMode.MODES.FINAL);
 
         if (__DEBUG__) {
@@ -271,8 +321,8 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
             this.uniforms.colorExtents.value[i] = fullExtent.clone();
         }
 
-        this.uniforms.proj_geocent = new THREE.Uniform([proj_wgs84]);
-        this.uniforms.proj_lcc = new THREE.Uniform([proj_l93]);
+        this.uniforms.proj_geocent = new THREE.Uniform(crs_defintions[CRS_DEFINES.GEOCENT]);
+        this.uniforms.proj_lcc = new THREE.Uniform(crs_defintions[CRS_DEFINES.LCC]);
 
         this.uniforms.riskTexture = new THREE.Uniform(riskTexture);
         this.uniforms.riskExtent = new THREE.Uniform(riskExtent);
@@ -289,11 +339,39 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
 
     setExtent(extent) {
         this.extent.set(extent.west, extent.south, extent.east, extent.north);
-        this.crs = tile_crs_define(extent.crs);
-        // console.log(this.crs, 'tile', extent.crs);
+        const crs = crs_define(extent.crs);
+        if (crs) {
+            this.tile_crs = crs[0];
+            this.tile_id_crs = crs[1];
+            if (this.tile_crs == CRS_DEFINES.LATLON) {
+                this.extent.x = THREE.Math.degToRad(this.extent.x);
+                this.extent.y = THREE.Math.degToRad(this.extent.y);
+                this.extent.z = THREE.Math.degToRad(this.extent.z);
+                this.extent.w = THREE.Math.degToRad(this.extent.w);
+            } else if (this.tile_crs == CRS_DEFINES.PM) {
+                const b = proj_wgs84.a;
+                this.extent.x /= b;
+                this.extent.y /= b;
+                this.extent.z /= b;
+                this.extent.w /= b;
+            }
+        }
+        if (!logged) {
+            logged = true;
+            console.log(this.tile_crs, this.tile_id_crs, 'tile', extent.crs);
+        }
     }
 
-    updateLayersUniforms() {
+    updateLayersUniforms(camera) {
+        const crs = crs_define(camera.crs);
+        if (crs) {
+            this.view_crs = crs[0];
+            this.view_id_crs = crs[1];
+        }
+        if (!camera.logged) {
+            camera.logged = true;
+            console.log(this.view_crs, this.view_id_crs, 'view', camera.crs);
+        }
         const colorlayers = this.layers.filter(l => this.colorLayerIds.includes(l.id) && l.visible && l.opacity > 0);
         colorlayers.sort((a, b) => this.colorLayerIds.indexOf(a.id) - this.colorLayerIds.indexOf(b.id));
         updateLayersUniforms(this.getUniformByType('color'), colorlayers, this.defines.NUM_FS_TEXTURES);

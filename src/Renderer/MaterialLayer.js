@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ELEVATION_MODES, tile_crs_define } from 'Renderer/LayeredMaterial';
+import { ELEVATION_MODES, crs_define } from 'Renderer/LayeredMaterial';
 import { checkNodeElevationTextureValidity, insertSignificantValuesFromParent } from 'Parser/XbilParser';
 
 export const EMPTY_TEXTURE_ZOOM = -1;
@@ -22,11 +22,17 @@ class MaterialLayer {
     constructor(material, layer) {
         this.id = layer.id;
         this.textureOffset = 0; // will be updated in updateUniforms()
-        this.crs = tile_crs_define(layer.projection);
-        if (this.crs == -1) {
+        const crs = crs_define(layer.projection);
+        if (crs) {
+            this.crs = crs[0];
+            this.crs_id = crs[1];
+        } else {
             console.error('Unknown crs:', layer.projection);
         }
-        // console.log(this.crs, this.id, layer.projection);
+        if (!layer.logged) {
+            layer.logged = true;
+            console.log(this.crs, this.crs_id, layer.projection);
+        }
 
         // Define color properties
         let _valueOpacity = layer.opacity !== undefined ? layer.opacity : true;

@@ -1,6 +1,7 @@
 struct ColorLayer {
     int textureOffset;
     int crs;
+    int crs_id;
     float effect;
     float opacity;
 };
