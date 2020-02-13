@@ -58,7 +58,7 @@ const PI_OVER_4 = 0.25 * Math.PI;
 const PI_OVER_360 = Math.PI / 360.0;
 
 export function getMaxColorSamplerUnitsCount() {
-    const maxSamplerUnitsCount = Capabilities.getMaxTextureUnitsCount();
+    const maxSamplerUnitsCount = Capabilities.getMaxTextureUnitsCount() - 2;
     return Math.min(maxSamplerUnitsCount - samplersElevationCount, maxSamplersColorCount);
 }
 
@@ -178,8 +178,12 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
 
         crsCount = 3; // WGS84, PM, L93 // TODO !!!
 
+        console.log('sos', samplersElevationCount, getMaxColorSamplerUnitsCount());
         nbSamplers = nbSamplers || [samplersElevationCount, getMaxColorSamplerUnitsCount()];
-
+        
+        // console.log('loki', nbSamplers);
+        // nbSamplers[1] = 10;
+        
         this.defines.NUM_VS_TEXTURES = nbSamplers[0];
         this.defines.NUM_FS_TEXTURES = nbSamplers[1];
         this.defines.USE_FOG = 1;
@@ -239,6 +243,8 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
         // best is a small negative number
         setUniformProperty(this, 'minBorderDistance', -0.01);
 
+        // test with waterLevel
+        setUniformProperty(this, 'waterLevel', 0.0);
         // LayeredMaterialLayers
         this.layers = [];
         this.elevationLayerIds = [];

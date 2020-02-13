@@ -19,6 +19,11 @@ varying vec2 vPM;
 uniform vec4 riskExtent;
 uniform sampler2D riskTexture;
 
+// itownsresearch mod
+uniform float zDisplacement;
+uniform float waterLevel;
+// itownsresearch mod over
+
 void main() {
     #include <logdepthbuf_fragment>
 
@@ -63,10 +68,17 @@ void main() {
     vec2 riskUv = (vLcc - riskExtent.xy) / (riskExtent.zw - riskExtent.xy);
     if (riskUv.x > 0. && riskUv.y > 0. && riskUv.x < 1. && riskUv.y < 1.) {
       float risk = (texture2D( riskTexture, riskUv).r * 256. - 1.)/(15. - 1.);
-      if (risk > 1./255.) risk = 1. - risk;
-      gl_FragColor.r = mix(gl_FragColor.r, 1., risk);
-      color = getOutlineColor( vec3(1.), riskUv);
-      gl_FragColor.rgb = mix(gl_FragColor.rgb, color.rgb, color.a);
+      // if (risk > 1./255.) risk = 1. - risk;
+      // gl_FragColor.b = mix(gl_FragColor.b, 1., risk);
+      // color = getOutlineColor( vec3(1.), riskUv);
+      //gl_FragColor.rgb = mix(gl_FragColor.rgb, color.rgb, color.a);
+      if (risk < waterLevel / 18. ) {
+        //gl_FragColor.r = mix(gl_FragColor.r, 1., risk);
+        if (risk > 1./255.) risk = 1. - risk;
+        gl_FragColor.b = mix(gl_FragColor.b, 1., risk);
+        gl_FragColor.g = mix(gl_FragColor.b, 1., risk);
+        color = getOutlineColor( vec3(1.), riskUv);
+      }
     }
 
 #endif
