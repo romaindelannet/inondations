@@ -227,10 +227,10 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
 
         console.log('sos', samplersElevationCount, getMaxColorSamplerUnitsCount());
         nbSamplers = nbSamplers || [samplersElevationCount, getMaxColorSamplerUnitsCount()];
-        
+
         // console.log('loki', nbSamplers);
         // nbSamplers[1] = 10;
-        
+
         this.defines.NUM_VS_TEXTURES = nbSamplers[0];
         this.defines.NUM_FS_TEXTURES = nbSamplers[1];
         this.defines.USE_FOG = 1;
